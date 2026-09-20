@@ -6,8 +6,9 @@ import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
-const url = `http://localhost:${process.env.PORT || 4173}${arg("path", "/")}?user=${arg("user", "Kai")}&pages=${arg("pages", 4)}&pace=${arg("pace", 1)}${arg("mode", "") ? `&mode=${arg("mode", "")}` : ""}`;
+const url = `http://localhost:${process.env.PORT || 4173}${arg("path", "/")}?user=${arg("user", "Kai")}&pages=${arg("pages", 4)}&pace=${arg("pace", 1)}${arg("mode", "") ? `&mode=${arg("mode", "")}` : ""}${arg("big", "") ? "&big=1" : ""}${arg("zoom", "") ? `&zoom=${arg("zoom", "")}` : ""}`;
 const [W, H] = arg("size", "1920x1080").split("x").map(Number);
+const DSF = +arg("dsf", 1);                 // 2 = record at 2x device pixels for a crisp downscale
 const out = resolve(arg("out", "video/jev-adrank-silent.mp4"));
 const raw = resolve("video/.raw");
 rmSync(raw, { recursive: true, force: true });
@@ -17,8 +18,8 @@ mkdirSync(dirname(out), { recursive: true });
 const browser = await chromium.launch();
 const t0 = Date.now();
 const ctx = await browser.newContext({
-  viewport: { width: W, height: H }, deviceScaleFactor: 1,
-  recordVideo: { dir: raw, size: { width: W, height: H } },
+  viewport: { width: W, height: H }, deviceScaleFactor: DSF,
+  recordVideo: { dir: raw, size: { width: W * DSF, height: H * DSF } },
 });
 const page = await ctx.newPage();
 page.on("console", (m) => m.type() === "error" && console.error("page error:", m.text()));
@@ -26,6 +27,7 @@ console.log("recording", url);
 await page.goto(url);
 const until = arg("until", "settle");
 if (until === "end") await page.waitForFunction(() => window.__marks?.some((m) => m.k === "end"), null, { timeout: 600_000 });
+else if (until === "endcard") await page.waitForFunction(() => document.getElementById("end")?.className === "on", null, { timeout: 600_000 });
 else await page.waitForFunction(() => /session done|error/i.test(document.getElementById("settle")?.textContent ?? ""), null, { timeout: 600_000 });
 await page.waitForTimeout(+arg("hold", "13") * 1000);
 const marks = await page.evaluate(() => window.__marks);

@@ -1,0 +1,50 @@
+[
+ {
+  "k": "boot",
+  "t": 0.2
+ },
+ {
+  "k": "review",
+  "t": 1.92
+ },
+ {
+  "k": "reject:misleading_financial",
+  "t": 2.39
+ },
+ {
+  "k": "reject:unsubstantiated_health",
+  "t": 2.69
+ },
+ {
+  "k": "reject:counterfeit_or_impossible",
+  "t": 2.99
+ },
+ {
+  "k": "reject:unsubstantiated_health",
+  "t": 3.29
+ },
+ {
+  "k": "reject:manipulates_ranking",
+  "t": 3.59
+ },
+ {
+  "k": "verdict",
+  "t": 3.89
+ },
+ {
+  "k": "feed",
+  "t": 5.79
+ },
+ {
+  "k": "bids",
+  "t": 7.65
+ },
+ {
+  "k": "win",
+  "t": 8.65
+ },
+ {
+  "k": "done",
+  "t": 11.81
+ }
+]

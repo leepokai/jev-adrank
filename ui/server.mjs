@@ -27,9 +27,12 @@ createServer(async (req, res) => {
   const pace = +(url.searchParams.get("pace") ?? 1);
   const wait = (ms) => sleep(ms * pace);
   // The short cut spends its seconds where a muted viewer needs them: on the two verdicts, not on scrolling.
-  const T = url.searchParams.get("mode") === "short"
-    ? { boot: 300, afterCall: 150, clean: 6, reject: 190, verdict: 1900, page: 0, organic: 0, bids: 700, win: 2100 }
-    : { boot: 3800, afterCall: 500, clean: 95, reject: 420, verdict: 6800, page: 500, organic: 750, bids: 1500, win: 2200 };
+  const T = {
+    short: { boot: 300, afterCall: 150, clean: 6, reject: 190, verdict: 1900, page: 0, organic: 0, bids: 700, win: 2100 },
+    // the real board, cut to a timeline length: the feed still visibly scrolls, the two verdicts get the seconds
+    clip:  { boot: 700, afterCall: 200, clean: 14, reject: 300, verdict: 1900, page: 150, organic: 280, bids: 1000, win: 2600 },
+    long:  { boot: 3800, afterCall: 500, clean: 95, reject: 420, verdict: 6800, page: 500, organic: 750, bids: 1500, win: 2200 },
+  }[url.searchParams.get("mode") ?? "long"] ?? { boot: 3800, afterCall: 500, clean: 95, reject: 420, verdict: 6800, page: 500, organic: 750, bids: 1500, win: 2200 };
 
   try {
     const user = PERSONAS.find((p) => p.name === (url.searchParams.get("user") ?? "Kai")) ?? PERSONAS[0];

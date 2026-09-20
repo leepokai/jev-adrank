@@ -92,6 +92,20 @@
   .met .v.c{color:var(--jev)} .met .v.g{color:var(--ok)} .met .v.p{color:var(--buy)}
   .flash{animation:flash .6s}
   @keyframes flash{0%{background:rgba(34,211,238,.16)}}
+
+  /* ?big=1 — presentation type for the short clip: same layout, ~1.3x type, fewer rows */
+  html.big .logo{font-size:27px} html.big .tag{font-size:16px} html.big .chip{font-size:15px;padding:6px 14px}
+  html.big .who{font-size:16px;line-height:1.4} html.big .who b{font-size:21px} html.big .tags span{font-size:13px}
+  html.big .card .t{font-size:18px} html.big .card .m{font-size:13.5px} html.big .badge{font-size:12px}
+  html.big h2{font-size:15px} html.big h2 em{font-size:15px} html.big h2 .n{width:24px;height:24px;font-size:13px}
+  html.big .rrow{font-size:16px;grid-template-columns:96px 46px 250px 214px 1fr;padding:5px 12px}
+  html.big .v{font-size:14px} html.big .kind{font-size:13.5px}
+  html.big .verdictbar{font-size:17px}
+  html.big th{font-size:13px} html.big td{font-size:16.5px;padding:9px 12px} html.big td.name{font-size:17px}
+  html.big .settle{font-size:16px}
+  html.big .met .k{font-size:13px} html.big .met .v{font-size:34px} html.big .met .s{font-size:13.5px}
+  html.big .endbox h3{font-size:40px} html.big .endbox .sub{font-size:17px} html.big .endbox td{font-size:21px;padding:15px 14px}
+  html.big .endbox th{font-size:13px} html.big .endbox .tail{font-size:17px} html.big .endbox{width:1480px}
   .hide{display:none}
   #end{position:fixed;inset:0;background:rgba(6,7,11,.965);backdrop-filter:blur(3px);opacity:0;pointer-events:none;
     transition:opacity .7s ease;display:grid;place-items:center;z-index:9}
@@ -156,6 +170,10 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
+const Q = new URLSearchParams(location.search), BIG = Q.get("big") === "1";
+if (BIG) document.documentElement.classList.add("big");
+// ?zoom=2 renders the fixed 1920x1080 layout into a 3840x2160 viewport: real 4K pixels, not an upscale.
+if (+Q.get("zoom") > 1) document.documentElement.style.zoom = Q.get("zoom");
 const nt = (n) => "NT$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: n < 100 ? 2 : 0 });
 const pc = (n) => (n * 100).toFixed(1) + "%";
 let state = { gmv: 0, rev: 0 };
@@ -216,7 +234,7 @@ function handle(e) {
   if (e.type === "bids") {
     $("ameta").textContent = `${$("ameta").textContent.split(" · ")[0]} · ${e.rows.length} bidders · 1 call · ${e.ms} ms`;
     const max = Math.max(...e.rows.map((r) => r.ecpm), 1);
-    $("bids").innerHTML = e.rows.slice(0, 7).map((r, i) => `<tr id="b_${r.id}" class="${r.pCvr < 0.02 || r.pCtr < 0.015 ? "gated" : ""}">
+    $("bids").innerHTML = e.rows.slice(0, BIG ? 5 : 7).map((r, i) => `<tr id="b_${r.id}" class="${r.pCvr < 0.02 || r.pCtr < 0.015 ? "gated" : ""}">
       <td class="name">${r.advertiser}<span style="color:var(--dim)"> · ${r.product}</span></td>
       <td class="r">${nt(r.bid)}</td><td class="r">${pc(r.pCtr)}</td><td class="r">${pc(r.pCvr)}</td>
       <td><div class="bar"><i style="width:${(r.ecpm / max) * 100}%"></i></div></td>

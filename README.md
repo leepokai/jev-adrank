@@ -85,18 +85,20 @@ p(tap)/p(buy) and eCPM, the feed on the left, live meters for latency, spend, GM
 <div align="center">
   <a href="https://github.com/leepokai/jev-adrank/raw/main/video/jev-adrank.mp4">▶ 77-second walkthrough, with voiceover</a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/leepokai/jev-adrank/raw/main/video/jev-adrank-x.mp4">▶ 11-second cut</a>
+  <a href="https://github.com/leepokai/jev-adrank/raw/main/video/jev-adrank-x.mp4">▶ 17-second cut</a>
 </div>
 
 ```bash
-npm run ui        # localhost:4173  (?user=Mei&pages=6&pace=1.35)
+npm run ui        # localhost:4173  (?user=Mei&pages=6&pace=1.35&big=1&zoom=2)
 npm run record    # drives it headless → video/jev-adrank-silent.mp4 (1920×1080)
 npm run vo        # adds narration      → video/jev-adrank.mp4
-npm run clip      # the 11-second cut   → video/jev-adrank-x.mp4 (1280×720, silent)
+npm run clip      # the 17-second cut   → video/jev-adrank-x.mp4 (1080p) + jev-adrank-x-4k.mp4
 ```
 
-`/short` is a second composition on the same stream — two beats, big type, no narration, sized for a
-muted autoplay in a timeline. Same live calls, same numbers, a tenth of the running time.
+The cut is the same board, one page, rendered at true 4K (`?zoom=2` draws the 1920×1080 layout into a
+3840×2160 viewport, so the downscale to 1080p is supersampled, not upscaled), with `?big=1` presentation
+type and a music bed mixed from three Apple Loops on the machine. No narration — it plays muted first.
+`npm run clip:cards` builds the older two-card composition at `/short` instead.
 
 `record` writes `video/marks.json`, the wall-clock time of every event in that take, and `vo` places each line
 against those marks (`"at": "bids#2+0.5"` = half a second after the second auction call came back) — so
