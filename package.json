@@ -1,11 +1,11 @@
 {
-  "name": "jev-rec-demo",
+  "name": "jev-hammer",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
-  "description": "Real-time feed ranking with Jev: one typed call scores a whole candidate page.",
+  "description": "Real-time ad ranking and creative review on a typed evaluation model. One call prices a whole auction.",
   "scripts": {
-    "demo": "node demo.js",
+    "shop": "node shop.js",
+    "feed": "node feed.js",
     "eval": "node eval.js",
     "test": "node test.js",
     "ui": "node ui/server.mjs",
@@ -20,5 +20,38 @@
   },
   "devDependencies": {
     "playwright": "^1.63.0"
-  }
+  },
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./auction": "./src/auction.js",
+    "./rank": "./src/rank.js"
+  },
+  "files": [
+    "index.js",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "jev",
+    "typesafe",
+    "ads",
+    "ad-ranking",
+    "recommendation",
+    "auction",
+    "ecpm",
+    "creative-review",
+    "brand-safety",
+    "prompt-injection",
+    "real-time"
+  ],
+  "author": "leepokai",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leepokai/jev-hammer.git"
+  },
+  "homepage": "https://github.com/leepokai/jev-hammer#readme",
+  "bugs": "https://github.com/leepokai/jev-hammer/issues"
 }
