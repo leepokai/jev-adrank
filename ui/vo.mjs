@@ -5,9 +5,9 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, mkdirSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
-const vid = resolve(arg("in", "video/jev-adrank-silent.mp4"));
-const out = resolve(arg("out", "video/jev-adrank.mp4"));
+import { args } from "../src/cli.js";
+const A = args({ in: "video/jev-adrank-silent.mp4", out: "video/jev-adrank.mp4", force: false });
+const vid = resolve(A.in), out = resolve(A.out);
 const dir = resolve("video/vo");
 mkdirSync(dir, { recursive: true });
 
@@ -25,7 +25,7 @@ function resolveAt(at) {
 
 const clips = lines.map((l) => {
   const mp3 = resolve(dir, `${l.id}.mp3`);
-  if (!existsSync(mp3) || process.argv.includes("--force"))
+  if (!existsSync(mp3) || A.force)
     execFileSync("uvx", ["edge-tts", "--voice", voice, "--rate", rate, "--text", l.text, "--write-media", mp3], { stdio: "inherit" });
   const secs = +(execFileSync("afinfo", [mp3]).toString().match(/estimated duration: ([\d.]+)/)?.[1] ?? 0);
   return { ...l, mp3, at: resolveAt(l.at), secs };
@@ -43,9 +43,9 @@ const tail = clips.at(-1).at + clips.at(-1).secs - dur;
 if (tail > 0) console.log(`\nlast line runs ${tail.toFixed(1)}s past the end of the video — re-record with a longer hold or trim the line`);
 if (clash) console.log(`${clash} line(s) overlap the next by more than 0.25s`);
 
-const args = ["-y", "-i", vid, ...clips.flatMap((c) => ["-i", c.mp3])];
+const ff = ["-y", "-i", vid, ...clips.flatMap((c) => ["-i", c.mp3])];
 const filter = clips.map((c, i) => `[${i + 1}:a]adelay=${Math.round(c.at * 1000)}:all=1[a${i}]`).join(";")
   + ";" + clips.map((_, i) => `[a${i}]`).join("") + `amix=inputs=${clips.length}:normalize=0:dropout_transition=0[vo]`;
-execFileSync("ffmpeg", [...args, "-filter_complex", filter, "-map", "0:v", "-map", "[vo]",
+execFileSync("ffmpeg", [...ff, "-filter_complex", filter, "-map", "0:v", "-map", "[vo]",
   "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-shortest", "-movflags", "+faststart", out], { stdio: "inherit" });
 console.log("\nwrote", out);

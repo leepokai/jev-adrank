@@ -10,13 +10,13 @@ import { runSession } from "./src/session.js";
 import { jevRank, heuristic, oracle } from "./src/rank.js";
 import { trueEngage } from "./src/data.js";
 
-const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
-const sessions = +arg("sessions", 4), pages = +arg("pages", 6), conc = +arg("concurrency", 4);
+import { args } from "./src/cli.js";
+const { sessions, pages, concurrency: conc, feed: FEED } = args({ sessions: 4, pages: 6, concurrency: 4, feed: false });
 const c = { dim: "\x1b[2m", g: "\x1b[32m", r: "\x1b[31m", b: "\x1b[36m", bold: "\x1b[1m", x: "\x1b[0m" };
 const nt = (n) => "NT$" + n.toLocaleString("en-US", { maximumFractionDigits: n < 100 ? 1 : 0 });
 
 // --feed evaluates the organic ranker on its own, away from the ad stack.
-if (process.argv.includes("--feed")) {
+if (FEED) {
   const runsF = PERSONAS.flatMap((u) => Array.from({ length: sessions }, (_, k) => ({ user: u, seed: 100 + k * 17 })));
   console.log(`\n${c.bold}organic feed A/B${c.x} ${c.dim}· backend ${mode()} · ${runsF.length} sessions × ${pages} pages${c.x}\n`);
   const armsF = [
@@ -88,7 +88,8 @@ console.log(`\n${c.bold}results${c.x} ${c.dim}(expected value per slot, ${runs.l
 console.log(c.dim + hdr + c.x);
 for (const r of results) {
   const lift = base.takeRpm ? ((r.takeRpm / base.takeRpm - 1) * 100).toFixed(0) + "%" : "—";
-  const line = `  ${r.name.padEnd(22)} ${nt(r.rpm).padStart(7)} ${nt(r.takeRpm).padStart(8)} ${lift.padStart(6)} ${(r.ctr * 100).toFixed(2).padStart(5)}% ${(r.cvr * 100).toFixed(1).padStart(5)}% ${nt(r.gmv).padStart(9)} ${r.roas.toFixed(1).padStart(5)}x ${String(r.bad).padStart(4)} ${r.harm.toFixed(1).padStart(6)}`;
+  const line = `  ${r.name.padEnd(22)} ${nt(r.rpm).padStart(7)} ${nt(r.takeRpm).padStart(8)} ${lift.padStart(6)} ${(r.ctr * 100).toFixed(2).padStart(5)}% ${(r.cvr * 100).toFixed(1).padStart(5)}% ${nt(r.gmv).padStart(9)} ${r.roas.toFixed(1).padStart(5)}x ${String(r.bad).padStart(4)} ${r.harm.toFixed(1).padStart(6)}`
+    + (r.fb ? c.r + `  ${r.fb}/${r.calls + r.fb} calls fell back` + c.x : "");
   console.log(r.name === "jev + review" ? c.b + line + c.x : r.name.startsWith("oracle") ? c.dim + line + c.x : line);
 }
 
@@ -101,7 +102,7 @@ console.log(`${c.dim}at $${(jev.cost / Math.max(1, jev.calls) * 1e6).toFixed(0)}
 async function pool(items, n, fn) {
   const out = new Array(items.length);
   let i = 0;
-  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(n | 0, items.length)) }, async () => {
     while (i < items.length) { const k = i++; out[k] = await fn(items[k]); }
   }));
   return out;

@@ -1,74 +1,74 @@
 [
  {
   "k": "boot",
-  "t": 0.06
+  "t": 0.62
  },
  {
   "k": "review",
-  "t": 6.32
+  "t": 6.87
  },
  {
   "k": "reject:misleading_financial",
-  "t": 9.38
+  "t": 9.87
  },
  {
   "k": "reject:unsubstantiated_health",
-  "t": 9.94
+  "t": 10.44
  },
  {
   "k": "reject:counterfeit_or_impossible",
-  "t": 10.51
+  "t": 11.01
  },
  {
   "k": "reject:unsubstantiated_health",
-  "t": 11.08
+  "t": 11.57
  },
  {
   "k": "reject:manipulates_ranking",
-  "t": 11.65
+  "t": 12.14
  },
  {
   "k": "verdict",
-  "t": 12.21
+  "t": 12.71
  },
  {
   "k": "feed",
-  "t": 21.4
+  "t": 21.9
  },
  {
   "k": "bids",
-  "t": 24.89
+  "t": 25.3
  },
  {
   "k": "win",
-  "t": 26.91
+  "t": 27.32
  },
  {
   "k": "bids",
-  "t": 35.52
+  "t": 36.11
  },
  {
   "k": "win",
-  "t": 37.55
+  "t": 38.14
  },
  {
   "k": "bids",
-  "t": 46.11
+  "t": 46.76
  },
  {
   "k": "win",
-  "t": 48.14
+  "t": 48.79
  },
  {
   "k": "bids",
-  "t": 56.98
+  "t": 57.41
  },
  {
   "k": "win",
-  "t": 59.01
+  "t": 59.43
  },
  {
   "k": "done",
-  "t": 64.01
+  "t": 64.43
  }
 ]

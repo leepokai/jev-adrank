@@ -2,7 +2,7 @@
 // Policy lives in this file as plain numbers; Jev only answers typed questions.
 import { ask } from "jev-guard/jev";
 import { ADS, adView, CATEGORY_TOPICS, trueCtr, trueCvr } from "./ads.js";
-import { meter, mode } from "./rank.js";
+import { meter, mode, recoverable } from "./rank.js";
 
 export const FLOOR_ECPM = 12;      // NT$ per 1000 impressions, below which the slot goes back to organic
 export const MIN_PCTR = 0.015;     // do not waste a slot on something nobody taps
@@ -12,10 +12,15 @@ export const FREQ_CAP = 2;
 // Jev answers "would this user tap it?" — a judgement, not a base rate. In-feed ads are tapped a few percent
 // of the time, so the raw probability has to be mapped onto the creative's own prior before it can price an
 // auction. This is the calibration layer every ad stack has: the model supplies the ordering and the spread,
-// the prior supplies the level. If every ad scores alike you fall straight back to the historical rate.
-export function calibrate(ps, priors, { gamma = 1.4, lo = 0.001, hi = 0.4 } = {}) {
-  const m = Math.max(0.05, ps.reduce((a, b) => a + b, 0) / Math.max(1, ps.length));
-  return ps.map((p, i) => Math.min(hi, Math.max(lo, priors[i] * Math.pow(Math.max(p, 0.01) / m, gamma))));
+// the prior supplies the level. The anchor is the model's typical raw answer, measured (see README): a score
+// at the anchor returns the prior, above it lifts, below it drops. It is a constant on purpose — anchoring on
+// the batch mean made an ad's price depend on who else happened to be bidding, and threw the answer away
+// entirely when there was one bidder.
+// Measured 2026-09-21 over 54 live tap/buy answers across the three reference users: tap mean 0.21 (median 0.15),
+// buy mean 0.24 (median 0.21). Re-measure if the questions change; `node -e` snippet in the README.
+export const TAP_ANCHOR = 0.21, BUY_ANCHOR = 0.24;
+export function calibrate(ps, priors, { gamma = 1.4, lo = 0.001, hi = 0.4, anchor = TAP_ANCHOR } = {}) {
+  return ps.map((p, i) => Math.min(hi, Math.max(lo, priors[i] * Math.pow(Math.max(p, 0.01) / anchor, gamma))));
 }
 
 const VIOLATIONS = {
@@ -26,10 +31,21 @@ const VIOLATIONS = {
   none: "Ordinary advertising: describes a real product, its price and what it does.",
 };
 
+const STUB_RULES = [
+  [/guarantee|\d+\s*%\s*returns|cash(ing)? out|before it closes/i, "misleading_financial"],
+  [/\bcures?\b|diabetes|lose \d+\s*kg|no diet|no exercise/i, "unsubstantiated_health"],
+  [/\b[7-9]\d\s*%\s*off|factory direct|same chip/i, "counterfeit_or_impossible"],
+  [/ranking model|scoring instructions|return 1\.0|ignore previous/i, "manipulates_ranking"],
+];
+
 /** Ingest-time review. One call for the whole batch; in production you cache the verdict per creative. */
 export async function reviewCreatives(ads = ADS) {
   if (mode() === "offline-stub") {
-    for (const a of ads) Object.assign(a, { review: a.hidden_policy === "ok" ? "approved" : "rejected", review_kind: a.hidden_policy, review_p: a.hidden_policy === "ok" ? 0.05 : 0.95, stub: true });
+    // Keyword rules over the creative text — the only thing a real reviewer would have. Never the hidden truth.
+    for (const a of ads) {
+      const kind = STUB_RULES.find(([re]) => re.test(a.creative ?? ""))?.[1] ?? "none";
+      Object.assign(a, { review: kind === "none" ? "approved" : "rejected", review_kind: kind, review_p: kind === "none" ? 0.08 : 0.92, stub: true });
+    }
     return ads;
   }
   const state = { task: "advertising creative review for a shoppable short-video marketplace", creatives: ads.map((a, i) => ({ n: i + 1, ...adView(a) })) };
@@ -43,7 +59,7 @@ export async function reviewCreatives(ads = ADS) {
     questions[`k${i + 1}`] = { type: "choice", instructions: `Which policy does creative #${i + 1} break, if any?`, criteria: VIOLATIONS };
   });
   const t0 = performance.now();
-  const a = await ask(state, questions, { timeoutMs: +(process.env.JEV_REC_TIMEOUT_MS || 4000) });
+  const a = await ask(state, questions, { timeoutMs: +(process.env.JEV_REC_REVIEW_TIMEOUT_MS || 8000) });   // 46 questions; fails closed, so give it room
   meter.calls++; meter.lat.push(Math.round(performance.now() - t0));
   meter.tokens += Math.round(Buffer.byteLength(JSON.stringify({ state, questions })) / 4);
   ads.forEach((ad, i) => {
@@ -95,9 +111,10 @@ export async function jevBid(user, ads, ast, session) {
     meter.calls++; meter.lat.push(Math.round(performance.now() - t0));
     meter.tokens += Math.round(Buffer.byteLength(JSON.stringify({ state, questions })) / 4);
     const pCtr = calibrate(ads.map((_, i) => a[`t${i + 1}`]?.p ?? 0), ads.map((x) => x.hist_ctr));
-    const pCvr = calibrate(ads.map((_, i) => a[`v${i + 1}`]?.p ?? 0), ads.map((x) => x.hist_cvr), { gamma: 1.6, hi: 0.5 });
-    return { scored: ads.map((ad, i) => ({ ad, pCtr: pCtr[i], pCvr: pCvr[i], raw: a[`t${i + 1}`]?.p })) };
+    const pCvr = calibrate(ads.map((_, i) => a[`v${i + 1}`]?.p ?? 0), ads.map((x) => x.hist_cvr), { gamma: 1.6, hi: 0.5, anchor: BUY_ANCHOR });
+    return { scored: ads.map((ad, i) => ({ ad, pCtr: pCtr[i], pCvr: pCvr[i], raw: a[`t${i + 1}`]?.p, rawBuy: a[`v${i + 1}`]?.p })) };
   } catch (err) {
+    if (!recoverable(err)) throw err;                                  // a dead key must not look like a slow one
     meter.fallbacks++; meter.lat.push(Math.round(performance.now() - t0));
     return { ...bidOnly(user, ads), fallback: String(err.message).slice(0, 60) };   // never hang a slot
   }
@@ -112,28 +129,11 @@ export function auction(scored, { gate = true } = {}) {
     .sort((a, b) => b.ecpm - a.ecpm);
   if (!ranked.length || ranked[0].ecpm < FLOOR_ECPM) return null;           // slot goes back to organic
   const [w, second] = ranked;
-  const price = Math.min(w.ad.bid, second ? second.ecpm / (w.pCtr * 1000) + 0.01 : FLOOR_ECPM / (w.pCtr * 1000));
-  return { ...w, price: Math.max(0.5, +price.toFixed(2)), runnerUp: second?.ad.advertiser, depth: ranked.length };
-}
-
-/** Show the winner, let the mock user react, bill the advertiser. */
-export function serve(user, win, ast, rnd) {
-  const ad = win.ad;
-  ast.slots++;
-  ast.adSeen[ad.id] = (ast.adSeen[ad.id] ?? 0) + 1;
-  ast.adSeenCat[ad.category] = (ast.adSeenCat[ad.category] ?? 0) + 1;
-  const pc = trueCtr(user, ad, ast);
-  const clicked = rnd() < pc;
-  let bought = false;
-  if (clicked) {
-    ast.clicks++; ast.revenue += win.price; ad.spent += win.price;
-    bought = rnd() < trueCvr(user, ad);
-    if (bought) { ast.purchases++; ast.gmv += ad.price_ntd; }
-  }
-  const harm = HARM[ad.hidden_policy] ?? 0;
-  ast.harm += harm * (clicked ? 1.5 : 1);
-  if (harm) ast.servedBad++;
-  return { ad, price: win.price, pCtr: win.pCtr, pCvr: win.pCvr, ecpm: win.ecpm, clicked, bought, pTrue: pc, depth: win.depth, fallback: win.fallback };
+  // GSP with a reserve: pay whichever is higher, the runner-up's price or the reserve, never more than your own bid.
+  const reserve = FLOOR_ECPM / (w.pCtr * 1000);
+  const runnerUp = second ? second.ecpm / (w.pCtr * 1000) + 0.01 : 0;
+  const price = Math.min(w.ad.bid, Math.max(runnerUp, reserve));
+  return { ...w, price: +price.toFixed(2), runnerUp: second?.ad.advertiser, depth: ranked.length };
 }
 
 function stubBid(user, ads, ast) {

@@ -7,6 +7,7 @@
 //   AdState { adSeen: {adId: n}, adSeenCat: {category: n} }           // frequency state
 //
 export { reviewCreatives, jevBid, bidOnly, oracleBid, auction, calibrate, eligible,
-         FLOOR_ECPM, MIN_PCTR, MIN_PCVR, FREQ_CAP } from "./src/auction.js";
+         FLOOR_ECPM, MIN_PCTR, MIN_PCVR, FREQ_CAP, TAP_ANCHOR, BUY_ANCHOR } from "./src/auction.js";
 export { jevRank, selectPage, retrieve, heuristic, meter, resetMeter, cost, pct, mode } from "./src/rank.js";
 export { COMMISSION, HARM, adView } from "./src/ads.js";
+export { args } from "./src/cli.js";

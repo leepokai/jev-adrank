@@ -4,8 +4,8 @@ import { PERSONAS, trueEngage } from "./src/data.js";
 import { jevRank, heuristic, oracle, meter, resetMeter, cost, pct, mode, PAGE } from "./src/rank.js";
 import { runSession } from "./src/session.js";
 
-const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
-const who = arg("user", "Kai"), pages = +arg("pages", 6), seed = +arg("seed", 7);
+import { args } from "./src/cli.js";
+const { user: who, pages, seed } = args({ user: "Kai", pages: 6, seed: 7 });
 const user = PERSONAS.find((p) => p.name.toLowerCase() === who.toLowerCase() || p.id === who);
 if (!user) { console.error(`unknown user ${who}; try: ${PERSONAS.map((p) => p.name).join(", ")}`); process.exit(1); }
 

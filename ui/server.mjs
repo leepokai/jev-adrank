@@ -9,6 +9,9 @@ import { reviewCreatives, jevBid, FLOOR_ECPM, MIN_PCTR, MIN_PCVR } from "../src/
 import { runShop } from "../src/shopsim.js";
 
 const PORT = +(process.env.PORT || 4173);
+// meter and the ADS review fields are module globals, so two streams at once would clobber each other's numbers.
+// ponytail: one run at a time; per-run state if this ever serves more than one viewer.
+let busy = false;
 process.env.JEV_REC_TIMEOUT_MS ??= "6000";   // a demo would rather wait than show the fallback path
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const pages_ = { "/": "./index.html", "/short": "./short.html" };
@@ -21,9 +24,14 @@ createServer(async (req, res) => {
     return res.end(await readFile(new URL(pages_[url.pathname], import.meta.url)));
   }
   if (url.pathname !== "/run") { res.writeHead(404); return res.end(); }
+  // A browser that reconnects after we ended the stream would replay the whole paid pipeline. Refuse it.
+  if (req.headers["last-event-id"] !== undefined) { res.writeHead(204); return res.end(); }
+  if (busy) { res.writeHead(409, { "content-type": "text/plain" }); return res.end("a run is already in progress"); }
+  busy = true;
 
   res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache", connection: "keep-alive" });
-  const send = (o) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+  let n = 0;
+  const send = (o) => res.write(`id: ${++n}\ndata: ${JSON.stringify(o)}\n\n`);
   const pace = +(url.searchParams.get("pace") ?? 1);
   const wait = (ms) => sleep(ms * pace);
   // The short cut spends its seconds where a muted viewer needs them: on the two verdicts, not on scrolling.
@@ -69,7 +77,7 @@ createServer(async (req, res) => {
       if (e.type === "bids") { send({ type: "bids", rows: e.rows, ms: e.bidMs, fallback: e.fallback }); return wait(T.bids); }
       if (e.kind === "blank") { send({ type: "blank", why: e.why, pool: e.pool }); return wait(900); }
       if (e.kind === "ad") {
-        send({ type: "win", advertiser: e.ad.advertiser, product: e.ad.product, category: e.ad.category, price_ntd: e.ad.price_ntd,
+        send({ type: "win", id: e.ad.id, advertiser: e.ad.advertiser, product: e.ad.product, category: e.ad.category, price_ntd: e.ad.price_ntd,
           creative: e.ad.creative, paid: e.price, runnerUp: e.runnerUp, depth: e.depth, pCtr: e.pCtr, pCvr: e.pCvr, ecpm: e.ecpm,
           clicked: e.clicked, bought: e.bought, eRev: e.eRev, eGmv: e.eGmv, pTrue: e.pTrue, totals: e.totals,
           meters: { calls: meter.calls, p50: pct(meter.lat, 0.5), last: meter.lat.at(-1), cost: cost() + reviewCost } });
@@ -80,6 +88,8 @@ createServer(async (req, res) => {
       meters: { calls: meter.calls, p50: pct(meter.lat, 0.5), p95: pct(meter.lat, 0.95), cost: cost() + reviewCost, reviewCost } });
   } catch (err) {
     send({ type: "error", message: String(err.message ?? err) });
+  } finally {
+    busy = false;
   }
   res.end();
 }).listen(PORT, () => console.log(`ui on http://localhost:${PORT}  (backend: ${mode()})`));

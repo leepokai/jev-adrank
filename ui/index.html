@@ -176,7 +176,7 @@ if (BIG) document.documentElement.classList.add("big");
 if (+Q.get("zoom") > 1) document.documentElement.style.zoom = Q.get("zoom");
 const nt = (n) => "NT$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: n < 100 ? 2 : 0 });
 const pc = (n) => (n * 100).toFixed(1) + "%";
-let state = { gmv: 0, rev: 0 };
+let state = { gmv: 0, rev: 0 }, gates = { pctr: 0.015, pcvr: 0.02 };
 
 window.__marks = [];
 const mark = (k) => window.__marks.push({ k, t: Date.now() });
@@ -190,9 +190,10 @@ es.onmessage = (m) => {
   if (e.type === "feed-start") mark("feed");
   if (e.type === "bids") mark("bids");
   if (e.type === "win") mark("win");
-  if (e.type === "done") { mark("done"); es.close(); }   // otherwise the browser reconnects and reruns the whole thing
+  if (e.type === "done" || e.type === "error") { mark(e.type); es.close(); }   // otherwise the browser reconnects and reruns the whole thing
   handle(e);
 };
+es.onerror = () => es.close();   // a dropped or refused stream ends the run; it never restarts it
 
 function handle(e) {
   if (e.type === "boot") {
@@ -201,6 +202,7 @@ function handle(e) {
     $("uprof").textContent = e.user.profile;
     $("utags").innerHTML = e.user.tags.map((t) => `<span>${t}</span>`).join("");
     $("mBlkS").textContent = "of " + e.creatives + " creatives";
+    gates = { pctr: e.minPctr ?? gates.pctr, pcvr: e.minPcvr ?? gates.pcvr };
   }
   if (e.type === "review-start") {
     $("reviewList").innerHTML = e.ads.map((a) => `<div class="rrow" id="r_${a.id}">
@@ -234,9 +236,9 @@ function handle(e) {
   if (e.type === "bids") {
     $("ameta").textContent = `${$("ameta").textContent.split(" · ")[0]} · ${e.rows.length} bidders · 1 call · ${e.ms} ms`;
     const max = Math.max(...e.rows.map((r) => r.ecpm), 1);
-    $("bids").innerHTML = e.rows.slice(0, BIG ? 5 : 7).map((r, i) => `<tr id="b_${r.id}" class="${r.pCvr < 0.02 || r.pCtr < 0.015 ? "gated" : ""}">
+    $("bids").innerHTML = e.rows.slice(0, BIG ? 5 : 7).map((r, i) => `<tr id="b_${r.id}" class="${(r.pCvr != null && r.pCvr < gates.pcvr) || r.pCtr < gates.pctr ? "gated" : ""}">
       <td class="name">${r.advertiser}<span style="color:var(--dim)"> · ${r.product}</span></td>
-      <td class="r">${nt(r.bid)}</td><td class="r">${pc(r.pCtr)}</td><td class="r">${pc(r.pCvr)}</td>
+      <td class="r">${nt(r.bid)}</td><td class="r">${pc(r.pCtr)}</td><td class="r">${r.pCvr == null ? "—" : pc(r.pCvr)}</td>
       <td><div class="bar"><i style="width:${(r.ecpm / max) * 100}%"></i></div></td>
       <td class="r">${nt(r.ecpm)}</td></tr>`).join("");
     $("settle").className = "settle" + (e.fallback ? " on" : "");
@@ -245,7 +247,7 @@ function handle(e) {
     $("mLat").parentElement.classList.remove("flash"); void $("mLat").offsetWidth; $("mLat").parentElement.classList.add("flash");
   }
   if (e.type === "win") {
-    const row = $("b_" + (e.id ?? "")) ?? [...$("bids").rows].find((r) => r.cells[0].textContent.startsWith(e.advertiser));
+    const row = $("b_" + e.id);
     if (row) row.className = "win";
     $("settle").className = "settle on";
     $("settle").innerHTML = `wins the slot · beat ${e.depth - 1} rivals · pays <b>${nt(e.paid)}</b> second price (runner-up ${e.runnerUp ?? "the floor"})
@@ -253,6 +255,7 @@ function handle(e) {
     add(`<div class="card ad"><div class="t"><span class="badge">AD</span>&nbsp; ${e.advertiser} · ${e.product}</div>
       <div class="m"><span>${e.category}</span><span>${nt(e.price_ntd)}</span>
       <span class="res ${e.bought ? "b" : e.clicked ? "y" : "n"}">${e.bought ? "tapped → bought" : e.clicked ? "tapped" : "scrolled past"}</span></div></div>`);
+    if (e.pCvr == null) $("settle").innerHTML += ` <span style="color:var(--bad)">· filled on the fallback order</span>`;
     state.gmv += e.eGmv; state.rev += e.eRev;
     $("mGmv").textContent = nt(state.gmv);
     $("mRev").textContent = nt(state.rev);
@@ -277,7 +280,7 @@ function handle(e) {
       <td class="r">${x.cvr}%</td><td class="r">${nt(x.gmv)}</td><td class="r">${x.roas}x</td>
       <td class="r ${x.bad ? "bad" : "good"}">${x.bad}</td><td style="color:var(--dim);font-size:13px">${x.note ?? ""}</td></tr>`).join("");
     document.querySelector(".endbox").innerHTML = `
-      <h3>Per-user ranking is worth <b>+28% take</b> and <b>+51% GMV</b> — at zero policy violations served.</h3>
+      <h3>${e.ab.headline}</h3>
       <div class="sub">${e.ab.note}</div>
       <table><thead><tr><th>arm</th><th class="r">takeRPM</th><th class="r">lift</th><th class="r">CVR</th>
         <th class="r">GMV</th><th class="r">ROAS</th><th class="r">violations served</th><th></th></tr></thead><tbody>${r}</tbody></table>

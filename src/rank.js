@@ -14,6 +14,11 @@ export const pct = (a, q) => (a.length ? [...a].sort((x, y) => x - y)[Math.min(a
 
 export const mode = () => (process.env.JEV_REC_OFFLINE === "1" || !backend() ? "offline-stub" : backend().kind);
 
+/** Only a slow or flaky provider earns a silent fallback. A bad key, a 4xx, or our own TypeError must surface. */
+export const recoverable = (err) =>
+  err?.name === "TimeoutError" || err?.name === "AbortError" ||
+  /HTTP (5\d\d|429)/.test(err?.message ?? "") || (err?.name === "TypeError" && /fetch failed/i.test(err?.message ?? ""));
+
 // ---------- stage 1: retrieval (no model, no network) ----------
 export function retrieve(user, session, rnd, k = CANDIDATES) {
   const pool = ITEMS.filter((it) => !session.shown.has(it.id));
@@ -85,6 +90,7 @@ export async function jevRank(user, session, cands) {
       intent: a.intent?.choice, intentP: a.intent?.probabilities?.[a.intent?.choice],
     };
   } catch (err) {
+    if (!recoverable(err)) throw err;
     // A ranker that hangs is worse than a ranker that is dull: fall back to stage 1's order.
     meter.fallbacks++;
     meter.lat.push(Math.round(performance.now() - t0));

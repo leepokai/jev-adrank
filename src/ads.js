@@ -35,7 +35,7 @@ const RAW = [
 
 export const ADS = RAW.map(([category, advertiser, product, price_ntd, creative, len_s, bid, daily_budget, hist_ctr, rating, hq, ht, policy], i) => ({
   id: `ad_${String(i + 1).padStart(3, "0")}`, category, advertiser, product, price_ntd, creative, len_s,
-  bid, daily_budget, spent: 0, hist_ctr, rating,
+  bid, daily_budget, hist_ctr, rating,
   hist_cvr: +(0.02 + 0.018 * Math.max(0, rating - 2)).toFixed(3),
   hidden_quality: hq, hidden_trust: ht, hidden_policy: policy,
 }));

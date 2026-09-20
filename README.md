@@ -52,12 +52,21 @@ session events; nothing here needs a training pipeline behind it.
 
 ### Calibration is not optional
 
-Jev answers *"would this person tap it?"* — a judgement, not a base rate, and it comes back around 0.5–0.9.
-In-feed ads get tapped a few percent of the time. Feed the raw probability into `bid × p × 1000` and you get
-an eCPM of NT$7,200 and a meaningless auction. `calibrate()` maps the batch onto each creative's own historical
-rate: **the model supplies the ordering and the spread, the prior supplies the level**, and a batch where every
-ad scores alike falls straight back to the historical rate. After that, predicted pCTR lands within a point of
-the truth it is measured against.
+Jev answers *"would this person tap it?"* — a judgement, not a base rate. Feed the raw probability into
+`bid × p × 1000` and a 0.8 becomes an eCPM of NT$7,200 and a meaningless auction. `calibrate()` maps each answer
+onto the creative's own historical rate: **the model supplies the ordering and the spread, the prior supplies the
+level.** A score at the *anchor* returns the prior; above it lifts, below it drops:
+
+```
+pCTR = hist_ctr × (p / TAP_ANCHOR) ^ 1.4        TAP_ANCHOR = 0.21
+pCVR = hist_cvr × (p / BUY_ANCHOR) ^ 1.6        BUY_ANCHOR = 0.24
+```
+
+The anchors are Jev's typical raw answers, measured over 54 live tap/buy scores across the three reference users
+(tap mean 0.21, median 0.15; buy mean 0.24, median 0.21). They are constants on purpose: an earlier version
+anchored on the batch mean, which made an ad's price depend on who else happened to be bidding and threw the
+model's answer away entirely when there was one bidder. If you change the questions, re-measure — the snippet
+is `jevBid(...).scored.map((x) => x.raw)` over your own inventory.
 
 ### Creatives can write to the ranker
 
@@ -145,8 +154,8 @@ expected value against the hidden truth, so the ranking difference is what moves
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | bid × lifetime CTR | NT$709 | NT$725 | +126% | 5.18% | 0.6% | NT$24 | 0.5x | **72 / 72** |
 | + creative review | NT$136 | NT$320 | — | 2.15% | 14.8% | NT$265 | 27.1x | 0 |
-| jev, review skipped | NT$220 | NT$447 | +40% | 3.38% | 10.3% | NT$327 | 20.7x | 24 |
-| **jev + review** | NT$131 | **NT$409** | **+28%** | 2.87% | 14.6% | **NT$400** | **42.5x** | **0** |
+| jev, review skipped | NT$177 | NT$454 | +42% | 3.29% | 12.4% | NT$398 | 31.2x | 14 |
+| **jev + review** | NT$131 | **NT$414** | **+29%** | 2.86% | 14.7% | **NT$408** | **43.3x** | **0** |
 | oracle (hidden truth) | NT$222 | NT$641 | +100% | 3.83% | 12.5% | NT$604 | 37.9x | 0 |
 
 `takeRPM` = CPC revenue + a 5% commission on GMV, which is what a shop marketplace actually banks.
@@ -154,12 +163,14 @@ Lift is against *"+ creative review"*, because row 1's revenue **is** the fraud:
 is a policy violation and its advertisers get NT$0.50 of buyer spend per NT$1 they pay. It is in the table to
 show what short-term RPM optimises into, not as a baseline worth beating.
 
-Against the fair baseline, per-user ranking is worth **+28% take, +51% GMV, and 42.5x vs 27.1x ROAS**, at zero
-violations served. Note row 3: ranking alone still let 24 junk impressions through. **The ranker's quality gates
+Against the fair baseline, per-user ranking is worth **+29% take, +54% GMV, and 43.3x vs 27.1x ROAS**, at zero
+violations served. Note row 3: ranking alone still let 14 junk impressions through. **The ranker's quality gates
 are not a policy system** — review earns its own call.
 
-Cost of the whole run: 72 auction calls, p50 768 ms, p95 2.0 s at concurrency 6, **$0.014** — $191 per 1M
-auctions, about 1.5% of the take it prices.
+Cost of the whole run: 72 auctions, p50 861 ms, p95 2.3 s at concurrency 4, **$0.014** — $192 per 1M auctions,
+about 1.5% of the take it prices. **3 of the 72 slots ran on the fallback order** because the call missed its
+4 s deadline; at a 2.5 s deadline and concurrency 6 it was 8 of 72. The gateway has a latency tail, the stack is
+built to survive it, and the number is printed on every arm rather than hidden.
 
 ### Organic ranking, 15 sessions
 

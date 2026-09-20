@@ -7,8 +7,8 @@ import { meter, resetMeter, cost, pct, mode, PAGE } from "./src/rank.js";
 import { reviewCreatives, jevBid, FLOOR_ECPM, MIN_PCTR, MIN_PCVR } from "./src/auction.js";
 import { runShop } from "./src/shopsim.js";
 
-const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
-const who = arg("user", "Kai"), pages = +arg("pages", 6), seed = +arg("seed", 11);
+import { args } from "./src/cli.js";
+const { user: who, pages, seed } = args({ user: "Kai", pages: 6, seed: 11 });
 const user = PERSONAS.find((p) => p.name.toLowerCase() === who.toLowerCase() || p.id === who);
 if (!user) { console.error(`unknown user ${who}; try ${PERSONAS.map((p) => p.name).join(", ")}`); process.exit(1); }
 

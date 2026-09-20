@@ -135,7 +135,7 @@ es.onmessage = (m) => {
     const top = e.rows.slice(0, 6), max = Math.max(...top.map((r) => r.ecpm), 1);
     $("bd").innerHTML = `<div class="hd"><span>advertiser</span><span>p(tap)</span><span>p(buy)</span><span></span><span>eCPM</span><span></span></div>`
       + top.map((r) => `<div class="r" id="d_${r.id}">
-        <span class="n">${r.advertiser}</span><span class="v">${pc(r.pCtr)}</span><span class="v">${pc(r.pCvr)}</span>
+        <span class="n">${r.advertiser}</span><span class="v">${pc(r.pCtr)}</span><span class="v">${r.pCvr == null ? "—" : pc(r.pCvr)}</span>
         <div class="bar"><i style="width:0"></i></div><span class="p">${nt(r.ecpm)}</span><span class="wf"></span></div>`).join("");
     [...$("bd").querySelectorAll(".r")].forEach((el, i) => setTimeout(() => {
       el.classList.add("in");
@@ -151,7 +151,9 @@ es.onmessage = (m) => {
   }
   if (e.type === "feed-start") { show("w2"); stop2 = count($("t2")); }
   if (e.type === "done") { mark("done"); es.close(); setTimeout(() => { $("end").className = "on"; mark("end"); }, 900); }
+  if (e.type === "error") { mark("error"); es.close(); $("f2").innerHTML = `<span style="color:var(--bad)">${e.message}</span>`; }
 };
+es.onerror = () => es.close();
 </script>
 </body>
 </html>
