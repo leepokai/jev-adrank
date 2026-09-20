@@ -123,6 +123,11 @@
   .endbox td.bad{color:var(--bad)} .endbox td.good{color:var(--ok)}
   .endbox .tail{margin-top:26px;font-size:13.5px;color:var(--dim);font-family:var(--mono);line-height:1.8}
   .endbox .tail b{color:var(--mut)}
+  .endfacts{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin:34px 0 10px}
+  .endfacts div{text-align:center;padding:22px 10px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+  .endfacts b{display:block;font:500 40px/1 var(--mono);color:var(--jev);letter-spacing:-.02em;margin-bottom:10px}
+  .endfacts span{font-size:14px;color:var(--mut)}
+  html.big .endfacts b{font-size:50px} html.big .endfacts span{font-size:17px}
 </style>
 </head>
 <body>
@@ -274,17 +279,33 @@ function handle(e) {
     $("settle").innerHTML = `session done · ${e.slots} ad slots, ${e.blanks} handed back · <b>${e.servedBad} policy-violating impressions served</b>
       · ROAS ${e.roas.toFixed(1)}x · ranking cost $${(e.meters.cost / Math.max(1, e.meters.calls)).toFixed(5)} per auction`;
   }
-  if (e.type === "done" && e.ab) {
-    const r = e.ab.rows.map((x) => `<tr class="${x.win ? "w" : x.dim ? "d" : ""}">
-      <td class="name">${x.arm}</td><td class="r">${nt(x.takeRpm)}</td><td class="r">${x.lift}</td>
-      <td class="r">${x.cvr}%</td><td class="r">${nt(x.gmv)}</td><td class="r">${x.roas}x</td>
-      <td class="r ${x.bad ? "bad" : "good"}">${x.bad}</td><td style="color:var(--dim);font-size:13px">${x.note ?? ""}</td></tr>`).join("");
-    document.querySelector(".endbox").innerHTML = `
-      <h3>${e.ab.headline}</h3>
-      <div class="sub">${e.ab.note}</div>
-      <table><thead><tr><th>arm</th><th class="r">takeRPM</th><th class="r">lift</th><th class="r">CVR</th>
-        <th class="r">GMV</th><th class="r">ROAS</th><th class="r">violations served</th><th></th></tr></thead><tbody>${r}</tbody></table>
-      <div class="tail">${e.ab.foot}<br><b>jev-adrank</b> — one call prices a whole auction; latency is flat from 1 to 40 typed questions. github.com/leepokai/jev-adrank</div>`;
+  if (e.type === "done") {
+    // The closing card states only what this take measured. The simulated A/B table is opt-in (?end=ab),
+    // because its lifts come from the reference world's hidden truth, not from real users.
+    const m = e.meters;
+    if (Q.get("end") === "ab" && e.ab) {
+      const r = e.ab.rows.map((x) => `<tr class="${x.win ? "w" : x.dim ? "d" : ""}">
+        <td class="name">${x.arm}</td><td class="r">${nt(x.takeRpm)}</td><td class="r">${x.lift}</td>
+        <td class="r">${x.cvr}%</td><td class="r">${nt(x.gmv)}</td><td class="r">${x.roas}x</td>
+        <td class="r ${x.bad ? "bad" : "good"}">${x.bad}</td><td style="color:var(--dim);font-size:13px">${x.note ?? ""}</td></tr>`).join("");
+      document.querySelector(".endbox").innerHTML = `
+        <h3>${e.ab.headline}</h3>
+        <div class="sub">${e.ab.note}</div>
+        <table><thead><tr><th>arm</th><th class="r">takeRPM</th><th class="r">lift</th><th class="r">CVR</th>
+          <th class="r">GMV</th><th class="r">ROAS</th><th class="r">violations served</th><th></th></tr></thead><tbody>${r}</tbody></table>
+        <div class="tail">${e.ab.foot}<br><b>jev-adrank</b> — one call prices a whole auction; latency is flat from 1 to 40 typed questions. github.com/leepokai/jev-adrank</div>`;
+    } else {
+      document.querySelector(".endbox").innerHTML = `
+        <h3 style="text-align:center"><b>jev-adrank</b></h3>
+        <div class="sub" style="text-align:center;font-size:19px;color:var(--mut)">real-time ad ranking and creative review &nbsp;·&nbsp; no trained CTR model &nbsp;·&nbsp; no logged clicks</div>
+        <div class="endfacts">
+          <div><b>1</b><span>call prices a whole auction</span></div>
+          <div><b>${m.p50} ms</b><span>median round-trip, this take</span></div>
+          <div><b>$${(m.cost / Math.max(1, m.calls + 1)).toFixed(5)}</b><span>per call, this take</span></div>
+          <div><b>${$("mBlk").textContent}/${$("mBlk").textContent}</b><span>planted violations caught</span></div>
+        </div>
+        <div class="tail" style="text-align:center">latency is flat from 1 to 40 typed questions &nbsp;·&nbsp; github.com/leepokai/jev-adrank</div>`;
+    }
     setTimeout(() => $("end").className = "on", 2200);
   }
   if (e.type === "error") $("settle").innerHTML = `<span style="color:var(--bad)">${e.message}</span>`;

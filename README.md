@@ -104,6 +104,9 @@ npm run vo        # adds narration      → video/jev-adrank.mp4
 npm run clip      # the 17-second cut   → video/jev-adrank-x.mp4 (1080p) + jev-adrank-x-4k.mp4
 ```
 
+Both recordings close on what the take itself measured — calls, median latency, cost, review verdicts. The
+simulated A/B table is not in the videos; `?end=ab` puts it on the dashboard's closing card if you want it.
+
 The cut is the same board, one page, rendered at true 4K (`?zoom=2` draws the 1920×1080 layout into a
 3840×2160 viewport, so the downscale to 1080p is supersampled, not upscaled), with `?big=1` presentation
 type and a music bed mixed from three Apple Loops on the machine. No narration — it plays muted first.
