@@ -131,6 +131,31 @@ already most of the way there. The ad stack is where the gap opens up, because t
 on things a counter cannot see: whether an offer is credible, whether a price fits this person,
 whether a creative is bait.
 
+## The dashboard, and the video
+
+`npm run ui` serves a live dashboard at `localhost:4173` that runs the real stack and streams it over
+SSE: creative review filling in verdict by verdict, the auction table for each slot with every bidder's
+calibrated p(tap)/p(buy) and eCPM, the phone feed on the left, and live meters for latency, spend,
+GMV and blocked creatives. Nothing on that screen is mocked except the pacing between events.
+
+<div align="center"><img src="video/poster.jpg" width="760" alt="the dashboard mid-run"></div>
+
+```bash
+npm run ui        # localhost:4173  (?user=Mei&pages=6&pace=1.35)
+npm run record    # drives it headless and writes video/jev-rec-demo.mp4 (1920×1080)
+npm run vo        # adds the narration track -> video/jev-rec-demo-vo.mp4
+```
+
+`record` uses Playwright's video capture, and writes `video/marks.json` — the wall-clock time of every
+event in that take. `vo` reads those marks, so each narration line is placed against the run's real
+timings (`"at": "bids#2+0.5"` = half a second after the second auction call came back) rather than
+a hand-tuned timeline that breaks on the next recording. Voices come from `edge-tts` via `uvx`, free
+and keyless, the same pipeline as jev-guard's launch video. It prints a timing report and tells you
+which lines overrun the next.
+
+**`video/jev-rec-demo-vo.mp4` — 75 s, 1920×1080, narrated.** Creative review, four live auctions, and
+the A/B results card. Every latency and price in it came off the wire while recording.
+
 ## Files
 
 | | |

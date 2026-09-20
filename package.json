@@ -7,10 +7,18 @@
   "scripts": {
     "demo": "node demo.js",
     "eval": "node eval.js",
-    "test": "node test.js"
+    "test": "node test.js",
+    "ui": "node ui/server.mjs",
+    "record": "node ui/record.mjs --pages 4 --pace 1.35",
+    "vo": "node ui/vo.mjs"
   },
   "dependencies": {
     "jev-guard": "^0.3.1"
   },
-  "engines": { "node": ">=20.3" }
+  "engines": {
+    "node": ">=20.3"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
+  }
 }

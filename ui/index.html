@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jev · real-time ad ranking</title>
+<style>
+  :root{
+    --bg:#08090D; --panel:#101219; --panel2:#151822; --line:#1F2433; --line2:#2A3145;
+    --fg:#E8ECF5; --mut:#8792A8; --dim:#5B6479;
+    --jev:#22D3EE; --ok:#34D399; --bad:#F43F5E; --warn:#FBBF24; --buy:#A78BFA;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg);color:var(--fg);
+    font:15px/1.45 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  header{height:76px;display:flex;align-items:center;gap:18px;padding:0 36px;border-bottom:1px solid var(--line)}
+  .logo{font-size:21px;font-weight:650;letter-spacing:-.02em}
+  .logo b{color:var(--jev)}
+  .tag{font-size:13px;color:var(--mut)}
+  .pill{margin-left:auto;display:flex;gap:10px;align-items:center;font-size:13px;color:var(--mut)}
+  .chip{padding:5px 12px;border:1px solid var(--line2);border-radius:999px;background:var(--panel)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--bad);box-shadow:0 0 12px var(--bad);animation:pulse 1.4s infinite}
+  @keyframes pulse{50%{opacity:.35}}
+
+  main{display:grid;grid-template-columns:470px 1fr;height:calc(1080px - 76px)}
+  .left{border-right:1px solid var(--line);padding:26px 34px;display:flex;flex-direction:column}
+  .right{display:grid;grid-template-rows:auto 1fr auto;min-height:0}
+
+  .who{font-size:13px;color:var(--mut);margin-bottom:16px}
+  .who b{color:var(--fg);font-size:16px;display:block;margin-bottom:4px;font-weight:600}
+  .tags{display:flex;gap:6px;margin-top:9px}
+  .tags span{font-size:11px;padding:3px 9px;border-radius:6px;background:var(--panel2);color:var(--mut);border:1px solid var(--line)}
+
+  .phone{flex:1;min-height:0;border:1px solid var(--line2);border-radius:26px;background:linear-gradient(180deg,#0C0E14,#0A0C11);
+    padding:14px;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;overflow:hidden;position:relative}
+  .phone::before{content:"";position:absolute;top:0;left:0;right:0;height:120px;background:linear-gradient(180deg,#08090D,transparent);z-index:2;pointer-events:none}
+  .card{border:1px solid var(--line);border-radius:14px;padding:13px 15px;background:var(--panel);animation:rise .45s cubic-bezier(.2,.8,.2,1)}
+  @keyframes rise{from{opacity:0;transform:translateY(26px)}}
+  .card .t{font-size:14px;line-height:1.35;margin-bottom:7px}
+  .card .m{display:flex;gap:9px;align-items:center;font-size:11px;color:var(--dim);font-family:var(--mono)}
+  .card.ad{border-color:rgba(34,211,238,.45);background:linear-gradient(180deg,rgba(34,211,238,.08),var(--panel));box-shadow:0 0 0 1px rgba(34,211,238,.12),0 12px 40px -18px rgba(34,211,238,.6)}
+  .card.blank{border-style:dashed;border-color:var(--line2);background:transparent;color:var(--mut);font-size:12px;padding:16px}
+  .badge{font-size:10px;font-weight:700;letter-spacing:.09em;padding:2px 7px;border-radius:5px;background:var(--jev);color:#03212B}
+  .res{margin-left:auto}
+  .res.y{color:var(--ok)} .res.b{color:var(--buy)} .res.n{color:var(--dim)}
+
+  section{padding:20px 34px;min-height:0;display:flex;flex-direction:column}
+  h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:600;display:flex;align-items:center;gap:11px;margin-bottom:14px}
+  h2 .n{width:20px;height:20px;border-radius:6px;background:var(--panel2);border:1px solid var(--line2);display:grid;place-items:center;font-size:11px;color:var(--mut);letter-spacing:0}
+  h2 em{margin-left:auto;font-style:normal;letter-spacing:0;text-transform:none;font-size:12px;color:var(--mut);font-family:var(--mono)}
+  h2.off{opacity:.3}
+
+  #review{height:352px;overflow:hidden;position:relative}
+  #reviewList{position:absolute;inset:0;transition:transform .35s ease}
+  .rrow{display:grid;grid-template-columns:82px 40px 236px 156px 1fr;gap:12px;align-items:center;padding:4px 10px;border-left:2px solid transparent;
+    font-size:12.5px;line-height:1.25;border-radius:0 7px 7px 0;opacity:.28;transition:opacity .25s;white-space:nowrap}
+  .rrow.done{opacity:1;background:rgba(255,255,255,.015)}
+  .rrow.rej{border-left-color:var(--bad);background:rgba(244,63,94,.07);opacity:1}
+  .v{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em}
+  .v.a{color:var(--ok)} .v.r{color:var(--bad)}
+  .kind{font-size:10.5px;color:var(--warn);font-family:var(--mono)}
+  .adv{color:var(--mut);overflow:hidden;text-overflow:ellipsis} .cre{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rrow.rej .cre{color:#C4A0AC}
+
+  .verdictbar{display:flex;gap:26px;margin-top:12px;padding-top:13px;border-top:1px solid var(--line);font-size:13px;color:var(--mut);opacity:0;transition:opacity .4s}
+  .verdictbar.on{opacity:1}
+  .verdictbar b{color:var(--ok);font-family:var(--mono)}
+  .verdictbar b.w{color:var(--warn)}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:600;padding:0 10px 9px}
+  th.r,td.r{text-align:right}
+  td{padding:7px 10px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+  td.name{font-family:inherit;color:var(--fg);font-size:13px}
+  tr.win td{background:rgba(34,211,238,.09);color:var(--fg)}
+  tr.win td:first-child{box-shadow:inset 2px 0 var(--jev)}
+  tr.gated td{opacity:.34}
+  .bar{height:5px;border-radius:3px;background:var(--line2);position:relative;min-width:60px}
+  .bar i{position:absolute;inset:0;width:0;border-radius:3px;background:var(--jev);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+  tr:not(.win) .bar i{background:#39445E}
+  .settle{margin-top:13px;font-size:13px;color:var(--mut);font-family:var(--mono);opacity:0;transition:opacity .35s}
+  .settle.on{opacity:1}
+  .settle b{color:var(--jev)}
+
+  .meters{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line)}
+  .met{background:var(--bg);padding:19px 34px}
+  .met .k{font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--dim);margin-bottom:7px}
+  .met .v{font-size:25px;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:500}
+  .met .s{font-size:11px;color:var(--dim);margin-top:3px;font-family:var(--mono)}
+  .met .v.c{color:var(--jev)} .met .v.g{color:var(--ok)} .met .v.p{color:var(--buy)}
+  .flash{animation:flash .6s}
+  @keyframes flash{0%{background:rgba(34,211,238,.16)}}
+  .hide{display:none}
+  #end{position:fixed;inset:0;background:rgba(6,7,11,.965);backdrop-filter:blur(3px);opacity:0;pointer-events:none;
+    transition:opacity .7s ease;display:grid;place-items:center;z-index:9}
+  #end.on{opacity:1}
+  .endbox{width:1320px}
+  .endbox h3{font-size:30px;font-weight:600;letter-spacing:-.02em;margin-bottom:6px}
+  .endbox h3 b{color:var(--jev)}
+  .endbox .sub{font-size:14px;color:var(--mut);margin-bottom:30px;font-family:var(--mono)}
+  .endbox table{font-size:16px}
+  .endbox th{font-size:11px;padding-bottom:13px}
+  .endbox td{padding:13px 12px;font-size:16px;border-top:1px solid var(--line)}
+  .endbox tr.w td{background:rgba(34,211,238,.1);color:var(--fg)}
+  .endbox tr.w td:first-child{box-shadow:inset 3px 0 var(--jev);color:var(--jev);font-weight:600}
+  .endbox tr.d td{opacity:.42}
+  .endbox td.bad{color:var(--bad)} .endbox td.good{color:var(--ok)}
+  .endbox .tail{margin-top:26px;font-size:13.5px;color:var(--dim);font-family:var(--mono);line-height:1.8}
+  .endbox .tail b{color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><b>jev</b> · real-time ad ranking</div>
+  <div class="tag">TikTok-Shop-style feed · creative review + live auction</div>
+  <div class="pill">
+    <span class="chip" id="backend">connecting…</span>
+    <span class="chip"><span class="dot"></span> live calls</span>
+  </div>
+</header>
+
+<main>
+  <div class="left">
+    <div class="who"><b id="uname">—</b><span id="uprof"></span><div class="tags" id="utags"></div></div>
+    <div class="phone" id="phone"></div>
+  </div>
+
+  <div class="right">
+    <section>
+      <h2 id="h1"><span class="n">1</span> creative review <em id="rmeta"></em></h2>
+      <div id="review"><div id="reviewList"></div></div>
+      <div class="verdictbar" id="vbar"></div>
+    </section>
+
+    <section id="auctionSec">
+      <h2 id="h2" class="off"><span class="n">2</span> live auction <em id="ameta"></em></h2>
+      <table><thead><tr>
+        <th>advertiser</th><th class="r">bid</th><th class="r">p(tap)</th><th class="r">p(buy)</th><th style="width:210px"></th><th class="r">eCPM</th>
+      </tr></thead><tbody id="bids"></tbody></table>
+      <div class="settle" id="settle"></div>
+    </section>
+
+    <div class="meters">
+      <div class="met"><div class="k">last call</div><div class="v c" id="mLat">—</div><div class="s" id="mLatS">jev round-trip</div></div>
+      <div class="met"><div class="k">jev calls</div><div class="v" id="mCalls">0</div><div class="s" id="mCallsS">1 per auction</div></div>
+      <div class="met"><div class="k">spend on jev</div><div class="v" id="mCost">$0.00000</div><div class="s">$0.042 / 1M tokens</div></div>
+      <div class="met"><div class="k">expected GMV</div><div class="v p" id="mGmv">NT$0</div><div class="s" id="mGmvS">buyer spend</div></div>
+      <div class="met"><div class="k">ad revenue</div><div class="v g" id="mRev">NT$0</div><div class="s">CPC, 2nd price</div></div>
+      <div class="met"><div class="k">policy blocked</div><div class="v" id="mBlk">0</div><div class="s" id="mBlkS">before the auction</div></div>
+    </div>
+  </div>
+</main>
+<div id="end"><div class="endbox"></div></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const nt = (n) => "NT$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: n < 100 ? 2 : 0 });
+const pc = (n) => (n * 100).toFixed(1) + "%";
+let state = { gmv: 0, rev: 0 };
+
+window.__marks = [];
+const mark = (k) => window.__marks.push({ k, t: Date.now() });
+const es = new EventSource("/run" + location.search);
+es.onmessage = (m) => {
+  const e = JSON.parse(m.data);
+  if (e.type === "boot") mark("boot");
+  if (e.type === "review-call") mark("review");
+  if (e.type === "review-row" && e.verdict === "rejected") mark("reject:" + e.kind);
+  if (e.type === "review-done") mark("verdict");
+  if (e.type === "feed-start") mark("feed");
+  if (e.type === "bids") mark("bids");
+  if (e.type === "win") mark("win");
+  if (e.type === "done") { mark("done"); es.close(); }   // otherwise the browser reconnects and reruns the whole thing
+  handle(e);
+};
+
+function handle(e) {
+  if (e.type === "boot") {
+    $("backend").textContent = "backend: " + e.backend;
+    $("uname").textContent = e.user.name + "  " + e.user.id;
+    $("uprof").textContent = e.user.profile;
+    $("utags").innerHTML = e.user.tags.map((t) => `<span>${t}</span>`).join("");
+    $("mBlkS").textContent = "of " + e.creatives + " creatives";
+  }
+  if (e.type === "review-start") {
+    $("reviewList").innerHTML = e.ads.map((a) => `<div class="rrow" id="r_${a.id}">
+      <span class="v">·····</span><span class="num"></span><span class="adv">${a.advertiser} · ${a.product}</span>
+      <span class="kind"></span><span class="cre">${a.creative}</span></div>`).join("");
+  }
+  if (e.type === "review-call") $("rmeta").textContent = `${e.n} creatives · 1 call · ${e.ms} ms · $${e.cost.toFixed(5)}`;
+  if (e.type === "review-row") {
+    const row = $("r_" + e.id); if (!row) return;
+    const rej = e.verdict === "rejected";
+    row.className = "rrow done" + (rej ? " rej" : "");
+    row.children[0].className = "v " + (rej ? "r" : "a");
+    row.children[0].textContent = rej ? "REJECT" : "approve";
+    row.children[1].textContent = (e.p ?? 0).toFixed(2);
+    row.children[3].textContent = rej ? (e.kind ?? "") : "";
+    const list = $("reviewList"), top = row.offsetTop, h = $("review").clientHeight;
+    if (top > h - 80) list.style.transform = `translateY(${-(top - h + 80)}px)`;
+  }
+  if (e.type === "review-done") {
+    $("vbar").className = "verdictbar on";
+    $("vbar").innerHTML = `planted violations caught <b>${e.caught}/${e.planted}</b>
+      &nbsp;·&nbsp; false positives on clean creatives <b class="${e.falsePos ? "w" : ""}">${e.falsePos}/${e.clean}</b>`;
+    $("mBlk").textContent = e.caught;
+    $("mBlk").parentElement.classList.add("flash");
+  }
+  if (e.type === "feed-start") { $("h1").className = "off"; $("h2").className = ""; }
+  if (e.type === "page") $("ameta").textContent = "page " + e.page;
+  if (e.type === "organic") add(`<div class="card"><div class="t">${e.title}</div><div class="m">
+      <span>${e.topic}</span><span>${e.len_s}s</span>
+      <span class="res ${e.engaged ? "y" : "n"}">${e.engaged ? "watched " + e.dwell_s + "s" : "scrolled past"}</span></div></div>`);
+  if (e.type === "bids") {
+    $("ameta").textContent = `${$("ameta").textContent.split(" · ")[0]} · ${e.rows.length} bidders · 1 call · ${e.ms} ms`;
+    const max = Math.max(...e.rows.map((r) => r.ecpm), 1);
+    $("bids").innerHTML = e.rows.slice(0, 7).map((r, i) => `<tr id="b_${r.id}" class="${r.pCvr < 0.02 || r.pCtr < 0.015 ? "gated" : ""}">
+      <td class="name">${r.advertiser}<span style="color:var(--dim)"> · ${r.product}</span></td>
+      <td class="r">${nt(r.bid)}</td><td class="r">${pc(r.pCtr)}</td><td class="r">${pc(r.pCvr)}</td>
+      <td><div class="bar"><i style="width:${(r.ecpm / max) * 100}%"></i></div></td>
+      <td class="r">${nt(r.ecpm)}</td></tr>`).join("");
+    $("settle").className = "settle" + (e.fallback ? " on" : "");
+    if (e.fallback) $("settle").innerHTML = `<span style="color:var(--bad)">jev call missed its ${e.ms} ms deadline — fell back to the bid-only order, slot still filled</span>`;
+    $("mLat").textContent = e.ms + " ms";
+    $("mLat").parentElement.classList.remove("flash"); void $("mLat").offsetWidth; $("mLat").parentElement.classList.add("flash");
+  }
+  if (e.type === "win") {
+    const row = $("b_" + (e.id ?? "")) ?? [...$("bids").rows].find((r) => r.cells[0].textContent.startsWith(e.advertiser));
+    if (row) row.className = "win";
+    $("settle").className = "settle on";
+    $("settle").innerHTML = `wins the slot · beat ${e.depth - 1} rivals · pays <b>${nt(e.paid)}</b> second price (runner-up ${e.runnerUp ?? "the floor"})
+      &nbsp;·&nbsp; expected <b>${nt(e.eRev)}</b> revenue, <b>${nt(e.eGmv)}</b> GMV`;
+    add(`<div class="card ad"><div class="t"><span class="badge">AD</span>&nbsp; ${e.advertiser} · ${e.product}</div>
+      <div class="m"><span>${e.category}</span><span>${nt(e.price_ntd)}</span>
+      <span class="res ${e.bought ? "b" : e.clicked ? "y" : "n"}">${e.bought ? "tapped → bought" : e.clicked ? "tapped" : "scrolled past"}</span></div></div>`);
+    state.gmv += e.eGmv; state.rev += e.eRev;
+    $("mGmv").textContent = nt(state.gmv);
+    $("mRev").textContent = nt(state.rev);
+    $("mCalls").textContent = e.meters.calls;
+    $("mCost").textContent = "$" + e.meters.cost.toFixed(5);
+    $("mLatS").textContent = "p50 " + e.meters.p50 + " ms";
+  }
+  if (e.type === "blank") {
+    $("settle").className = "settle on";
+    $("settle").innerHTML = `no bid cleared the floor — <b>slot handed back to organic</b>`;
+    add(`<div class="card blank">AD SLOT — ${e.why} → returned to organic</div>`);
+  }
+  if (e.type === "done") {
+    $("h2").className = "off";
+    $("ameta").textContent = `${e.meters.calls} auctions · p50 ${e.meters.p50} ms · p95 ${e.meters.p95} ms · $${e.meters.cost.toFixed(5)} total`;
+    $("settle").innerHTML = `session done · ${e.slots} ad slots, ${e.blanks} handed back · <b>${e.servedBad} policy-violating impressions served</b>
+      · ROAS ${e.roas.toFixed(1)}x · ranking cost $${(e.meters.cost / Math.max(1, e.meters.calls)).toFixed(5)} per auction`;
+  }
+  if (e.type === "done" && e.ab) {
+    const r = e.ab.rows.map((x) => `<tr class="${x.win ? "w" : x.dim ? "d" : ""}">
+      <td class="name">${x.arm}</td><td class="r">${nt(x.takeRpm)}</td><td class="r">${x.lift}</td>
+      <td class="r">${x.cvr}%</td><td class="r">${nt(x.gmv)}</td><td class="r">${x.roas}x</td>
+      <td class="r ${x.bad ? "bad" : "good"}">${x.bad}</td><td style="color:var(--dim);font-size:13px">${x.note ?? ""}</td></tr>`).join("");
+    document.querySelector(".endbox").innerHTML = `
+      <h3>Per-user ranking is worth <b>+28% take</b> and <b>+51% GMV</b> — at zero policy violations served.</h3>
+      <div class="sub">${e.ab.note}</div>
+      <table><thead><tr><th>arm</th><th class="r">takeRPM</th><th class="r">lift</th><th class="r">CVR</th>
+        <th class="r">GMV</th><th class="r">ROAS</th><th class="r">violations served</th><th></th></tr></thead><tbody>${r}</tbody></table>
+      <div class="tail">${e.ab.foot}<br><b>jev-rec-demo</b> — one call scores a whole candidate page; latency is flat from 1 to 40 typed questions.</div>`;
+    setTimeout(() => $("end").className = "on", 2200);
+  }
+  if (e.type === "error") $("settle").innerHTML = `<span style="color:var(--bad)">${e.message}</span>`;
+}
+
+function add(html) {
+  const p = $("phone");
+  p.insertAdjacentHTML("beforeend", html);
+  while (p.children.length > 5) p.removeChild(p.firstElementChild);
+}
+</script>
+</body>
+</html>

@@ -1,2 +1,5 @@
 node_modules/
 *.env
+video/.raw/
+video/vo/
+video/jev-rec-demo.mp4

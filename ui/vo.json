@@ -1,0 +1,46 @@
+{
+  "voice": "en-US-AndrewNeural",
+  "rate": "+6%",
+  "lines": [
+    {
+      "at": "boot+0.5",
+      "id": "intro",
+      "text": "A mock TikTok Shop feed, ranked in real time by Jev. Every number here comes from a live call."
+    },
+    {
+      "at": "review+0.2",
+      "id": "review",
+      "text": "Creative review: twenty-three creatives, two typed questions each."
+    },
+    {
+      "at": "reject:misleading_financial+1.7",
+      "id": "rejects",
+      "text": "Five of them were planted to break policy. Guaranteed returns, a miracle cure, counterfeit AirPods. And the last one doesn't talk to the buyer at all. It talks to the ranking model, and asks to be scored one point zero."
+    },
+    {
+      "at": "bids#1+0.1",
+      "id": "auction",
+      "text": "Now the feed. Every fifth slot goes to auction. Eighteen eligible ads, two questions each: will this person tap it, and if they tap, will they buy. One call, under a second."
+    },
+    {
+      "at": "bids#2+0.5",
+      "id": "calib",
+      "text": "Those raw probabilities are judgements, not base rates. They get calibrated onto each creative's own historical rate before they price anything."
+    },
+    {
+      "at": "bids#3+0.5",
+      "id": "gates",
+      "text": "The gates matter as much as the ranking. Traffic that cannot convert does not get sold. One call per auction, around seven hundred milliseconds and two hundredths of a cent."
+    },
+    {
+      "at": "bids#4+0.6",
+      "id": "flat",
+      "text": "And a whole page is one round trip. Twenty candidates or forty, the latency is the same."
+    },
+    {
+      "at": "done+2.8",
+      "id": "results",
+      "text": "Measured over seventy-two ad slots: twenty-eight percent more take, fifty-one percent more G M V, and zero policy violations served."
+    }
+  ]
+}

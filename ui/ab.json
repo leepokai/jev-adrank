@@ -1,0 +1,11 @@
+{
+  "note": "Measured live against Jev on 2026-09-20 by `node eval.js --sessions 4`: 3 users × 4 sessions × 6 pages = 72 ad slots per arm. Slots scored by expected value against the simulator's hidden truth.",
+  "rows": [
+    { "arm": "bid × lifetime CTR", "takeRpm": 725, "lift": "+126%", "cvr": 0.6, "gmv": 24, "roas": 0.5, "bad": 72, "note": "every impression a violation" },
+    { "arm": "+ creative review", "takeRpm": 320, "lift": "baseline", "cvr": 14.8, "gmv": 265, "roas": 27.1, "bad": 0 },
+    { "arm": "jev, review skipped", "takeRpm": 447, "lift": "+40%", "cvr": 10.3, "gmv": 327, "roas": 20.7, "bad": 24, "note": "ranking alone is not a policy system" },
+    { "arm": "jev + review", "takeRpm": 409, "lift": "+28%", "cvr": 14.6, "gmv": 400, "roas": 42.5, "bad": 0, "win": true },
+    { "arm": "oracle (hidden truth)", "takeRpm": 641, "lift": "+100%", "cvr": 12.5, "gmv": 604, "roas": 37.9, "bad": 0, "dim": true }
+  ],
+  "foot": "72 auction calls · p50 768 ms · $0.014 for the whole run · $191 per 1M auctions, about 1.5% of the take it prices"
+}

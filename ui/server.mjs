@@ -1,0 +1,78 @@
+// Serves the dashboard and streams a real run over SSE. Every number the page shows comes from
+// an actual Jev call; the only thing this file invents is the pacing between events.
+import { createServer } from "node:http";
+import { readFile } from "node:fs/promises";
+import { PERSONAS } from "../src/data.js";
+import { ADS } from "../src/ads.js";
+import { meter, resetMeter, cost, pct, mode } from "../src/rank.js";
+import { reviewCreatives, jevBid, FLOOR_ECPM, MIN_PCTR, MIN_PCVR } from "../src/auction.js";
+import { runShop } from "../src/shopsim.js";
+
+const PORT = +(process.env.PORT || 4173);
+process.env.JEV_REC_TIMEOUT_MS ??= "6000";   // a demo would rather wait than show the fallback path
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const page = new URL("./index.html", import.meta.url);
+const ab = JSON.parse(await readFile(new URL("./ab.json", import.meta.url), "utf8"));
+
+createServer(async (req, res) => {
+  const url = new URL(req.url, `http://localhost:${PORT}`);
+  if (url.pathname === "/") {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    return res.end(await readFile(page));
+  }
+  if (url.pathname !== "/run") { res.writeHead(404); return res.end(); }
+
+  res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache", connection: "keep-alive" });
+  const send = (o) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+  const pace = +(url.searchParams.get("pace") ?? 1);
+  const wait = (ms) => sleep(ms * pace);
+
+  try {
+    const user = PERSONAS.find((p) => p.name === (url.searchParams.get("user") ?? "Kai")) ?? PERSONAS[0];
+    const pages = +(url.searchParams.get("pages") ?? 4);
+    send({ type: "boot", user: { name: user.name, id: user.id, profile: user.profile, tags: user.tags },
+      backend: mode(), creatives: ADS.length, floor: FLOOR_ECPM, minPctr: MIN_PCTR, minPcvr: MIN_PCVR, pages });
+    await wait(3800);   // room for the opening line
+
+    // ---- stage 1: creative review, one call, revealed row by row ----
+    resetMeter();
+    send({ type: "review-start", ads: ADS.map((a) => ({ id: a.id, advertiser: a.advertiser, product: a.product, creative: a.creative })) });
+    await reviewCreatives(ADS);
+    const reviewMs = meter.lat[0] ?? 0, reviewCost = cost();
+    send({ type: "review-call", ms: reviewMs, cost: reviewCost, n: ADS.length });
+    await wait(500);
+    for (const a of ADS) {
+      send({ type: "review-row", id: a.id, verdict: a.review, p: a.review_p, kind: a.review_kind, truth: a.hidden_policy });
+      await wait(a.review === "rejected" ? 420 : 95);
+    }
+    const planted = ADS.filter((a) => a.hidden_policy !== "ok");
+    send({ type: "review-done", caught: planted.filter((a) => a.review === "rejected").length, planted: planted.length,
+      falsePos: ADS.filter((a) => a.hidden_policy === "ok" && a.review === "rejected").length, clean: ADS.length - planted.length });
+    await wait(6800);   // room for the review verdict line
+
+    // ---- stage 2: the feed, one auction per page ----
+    resetMeter();
+    send({ type: "feed-start" });
+    const out = await runShop(user, jevBid, { pages, seed: 11, onEvent: async (e) => {
+      if (e.type === "page") { send({ type: "page", page: e.page }); return wait(500); }
+      if (e.type === "organic") {
+        send({ type: "organic", title: e.item.title, topic: e.item.topic, len_s: e.item.len_s, engaged: e.engaged, dwell_s: e.dwell_s });
+        return wait(750);
+      }
+      if (e.type === "bids") { send({ type: "bids", rows: e.rows, ms: e.bidMs, fallback: e.fallback }); return wait(1500); }
+      if (e.kind === "blank") { send({ type: "blank", why: e.why, pool: e.pool }); return wait(900); }
+      if (e.kind === "ad") {
+        send({ type: "win", advertiser: e.ad.advertiser, product: e.ad.product, category: e.ad.category, price_ntd: e.ad.price_ntd,
+          creative: e.ad.creative, paid: e.price, runnerUp: e.runnerUp, depth: e.depth, pCtr: e.pCtr, pCvr: e.pCvr, ecpm: e.ecpm,
+          clicked: e.clicked, bought: e.bought, eRev: e.eRev, eGmv: e.eGmv, pTrue: e.pTrue, totals: e.totals,
+          meters: { calls: meter.calls, p50: pct(meter.lat, 0.5), last: meter.lat.at(-1), cost: cost() + reviewCost } });
+        return wait(2200);
+      }
+    } });
+    send({ type: "done", ...out, session: undefined, ast: undefined, ab,
+      meters: { calls: meter.calls, p50: pct(meter.lat, 0.5), p95: pct(meter.lat, 0.95), cost: cost() + reviewCost, reviewCost } });
+  } catch (err) {
+    send({ type: "error", message: String(err.message ?? err) });
+  }
+  res.end();
+}).listen(PORT, () => console.log(`ui on http://localhost:${PORT}  (backend: ${mode()})`));

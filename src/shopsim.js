@@ -6,7 +6,7 @@ import { ADS, newAdState, HARM, COMMISSION, trueCtr as tCtr, trueCvr as tCvr } f
 import { retrieve, selectPage, heuristic, PAGE } from "./rank.js";
 import { eligible, auction, FLOOR_ECPM } from "./auction.js";
 
-export async function runShop(user, bidder, { pages = 6, seed = 11, review = true, gate = true, expected = false, adSlot = 2, onPage } = {}) {
+export async function runShop(user, bidder, { pages = 6, seed = 11, review = true, gate = true, expected = false, adSlot = 2, onPage, onEvent } = {}) {
   const rnd = rng(seed), s = newSession(user), ast = newAdState();
   ast.topicAffinity = {};
   const spent = new Map();                       // per-run budgets, so arms never bleed into each other
@@ -18,8 +18,9 @@ export async function runShop(user, bidder, { pages = 6, seed = 11, review = tru
     const organic = selectPage(heuristic(user, s, cands), { pageSize: PAGE - 1 });
     const rows = [];
 
+    await onEvent?.({ type: "page", page: p + 1 });
     for (let i = 0; i < PAGE; i++) {
-      if (i === adSlot) { rows.push(await adSlotTurn()); continue; }
+      if (i === adSlot) { const r = await adSlotTurn(); rows.push(r); await onEvent?.(r); continue; }
       const o = organic.shift();
       if (!o) continue;
       const ev = impress(user, o.item, s, rnd);
@@ -28,6 +29,7 @@ export async function runShop(user, bidder, { pages = 6, seed = 11, review = tru
       s.events.push({ id: o.item.id, title: o.item.title, topic: o.item.topic, len_s: o.item.len_s, ...ev });
       if (ev.engaged) ast.topicAffinity[o.item.topic] = (ast.topicAffinity[o.item.topic] ?? 0) + 1;
       rows.push({ kind: "organic", item: o.item, ...ev });
+      await onEvent?.({ kind: "organic", type: "organic", item: o.item, ...ev });
     }
     onPage?.({ page: p + 1, rows });
   }
@@ -35,7 +37,10 @@ export async function runShop(user, bidder, { pages = 6, seed = 11, review = tru
   async function adSlotTurn() {
     const pool = eligible(user, ADS, ast, { review }).filter((a) => left(a) >= a.bid);
     if (!pool.length) { ast.blanks++; return { kind: "blank", pool: 0, why: "no eligible bidder" }; }
+    const t0 = performance.now();
     const { scored, fallback } = await bidder(user, pool, ast, s);
+    const bidMs = Math.round(performance.now() - t0);
+    await onEvent?.({ type: "bids", bidMs, fallback, rows: scored.map((x) => ({ id: x.ad.id, advertiser: x.ad.advertiser, product: x.ad.product, category: x.ad.category, bid: x.ad.bid, pCtr: x.pCtr, pCvr: x.pCvr, ecpm: x.ad.bid * x.pCtr * 1000 })).sort((a, b) => b.ecpm - a.ecpm) });
     const win = auction(scored, { gate });
     if (!win) { ast.blanks++; return { kind: "blank", pool: pool.length, why: `no bid cleared the floor (eCPM < ${FLOOR_ECPM})` }; }
 
@@ -60,7 +65,8 @@ export async function runShop(user, bidder, { pages = 6, seed = 11, review = tru
     if (harm) ast.servedBad++;
     return { kind: "ad", pool: pool.length, ad, price: win.price, pCtr: win.pCtr, pCvr: win.pCvr, ecpm: win.ecpm,
       depth: win.depth, runnerUp: win.runnerUp, clicked, bought, pTrue: pc, cvrTrue: pv, eRev: win.price * pc,
-      eGmv: ad.price_ntd * pc * pv, fallback };
+      eGmv: ad.price_ntd * pc * pv, fallback, bidMs, take: ast.revenue + COMMISSION * ast.gmv,
+      totals: { slots: ast.slots, blanks: ast.blanks, revenue: ast.revenue, gmv: ast.gmv, servedBad: ast.servedBad } };
   }
 
   const shown = ast.slots + ast.blanks;
