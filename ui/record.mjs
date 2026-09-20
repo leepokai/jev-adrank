@@ -1,5 +1,5 @@
 // Records the dashboard running a real session, then muxes it to mp4.
-// node ui/record.mjs [--user Kai] [--pages 4] [--pace 1] [--out video/jev-hammer-silent.mp4]
+// node ui/record.mjs [--user Kai] [--pages 4] [--pace 1] [--out video/jev-adrank-silent.mp4]
 import { chromium } from "playwright";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -8,7 +8,7 @@ import { dirname, join, resolve } from "node:path";
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
 const url = `http://localhost:${process.env.PORT || 4173}${arg("path", "/")}?user=${arg("user", "Kai")}&pages=${arg("pages", 4)}&pace=${arg("pace", 1)}${arg("mode", "") ? `&mode=${arg("mode", "")}` : ""}`;
 const [W, H] = arg("size", "1920x1080").split("x").map(Number);
-const out = resolve(arg("out", "video/jev-hammer-silent.mp4"));
+const out = resolve(arg("out", "video/jev-adrank-silent.mp4"));
 const raw = resolve("video/.raw");
 rmSync(raw, { recursive: true, force: true });
 mkdirSync(raw, { recursive: true });

@@ -1,13 +1,13 @@
 // Voiceover for the recording: one mp3 per line via edge-tts (free Microsoft voices, no key),
 // each placed at a timestamp resolved from video/marks.json — the real event times of that take.
-// Usage: node ui/vo.mjs [--in video/jev-hammer-silent.mp4] [--out video/jev-hammer.mp4]
+// Usage: node ui/vo.mjs [--in video/jev-adrank-silent.mp4] [--out video/jev-adrank.mp4]
 import { execFileSync } from "node:child_process";
 import { readFileSync, mkdirSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
-const vid = resolve(arg("in", "video/jev-hammer-silent.mp4"));
-const out = resolve(arg("out", "video/jev-hammer.mp4"));
+const vid = resolve(arg("in", "video/jev-adrank-silent.mp4"));
+const out = resolve(arg("out", "video/jev-adrank.mp4"));
 const dir = resolve("video/vo");
 mkdirSync(dir, { recursive: true });
 

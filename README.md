@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>jev-hammer</h1>
+  <h1>jev-adrank</h1>
   <p><strong>Real-time ad ranking and creative review on a typed evaluation model — no trained CTR model, no logged clicks.</strong></p>
   <p>
     <img src="https://img.shields.io/badge/node-%E2%89%A520.3-339933" alt="node 20.3+">
@@ -39,7 +39,7 @@ gate (don't take an advertiser's money for traffic that can't convert), second-p
 and a fallback to the bid-only order if a call ever misses its deadline.
 
 ```js
-import { reviewCreatives, jevBid, auction } from "jev-hammer";
+import { reviewCreatives, jevBid, auction } from "jev-adrank";
 
 await reviewCreatives(ads);                              // once, at ingest — sets ad.review
 const live = ads.filter((a) => a.review !== "rejected");
@@ -83,16 +83,16 @@ p(tap)/p(buy) and eCPM, the feed on the left, live meters for latency, spend, GM
 <div align="center"><img src="video/poster.jpg" width="820" alt="the board, mid-auction"></div>
 
 <div align="center">
-  <a href="https://github.com/leepokai/jev-hammer/raw/main/video/jev-hammer.mp4">▶ 77-second walkthrough, with voiceover</a>
+  <a href="https://github.com/leepokai/jev-adrank/raw/main/video/jev-adrank.mp4">▶ 77-second walkthrough, with voiceover</a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/leepokai/jev-hammer/raw/main/video/jev-hammer-x.mp4">▶ 11-second cut</a>
+  <a href="https://github.com/leepokai/jev-adrank/raw/main/video/jev-adrank-x.mp4">▶ 11-second cut</a>
 </div>
 
 ```bash
 npm run ui        # localhost:4173  (?user=Mei&pages=6&pace=1.35)
-npm run record    # drives it headless → video/jev-hammer-silent.mp4 (1920×1080)
-npm run vo        # adds narration      → video/jev-hammer.mp4
-npm run clip      # the 11-second cut   → video/jev-hammer-x.mp4 (1280×720, silent)
+npm run record    # drives it headless → video/jev-adrank-silent.mp4 (1920×1080)
+npm run vo        # adds narration      → video/jev-adrank.mp4
+npm run clip      # the 11-second cut   → video/jev-adrank-x.mp4 (1280×720, silent)
 ```
 
 `/short` is a second composition on the same stream — two beats, big type, no narration, sized for a

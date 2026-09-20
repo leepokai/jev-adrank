@@ -263,7 +263,7 @@ function handle(e) {
       <div class="sub">${e.ab.note}</div>
       <table><thead><tr><th>arm</th><th class="r">takeRPM</th><th class="r">lift</th><th class="r">CVR</th>
         <th class="r">GMV</th><th class="r">ROAS</th><th class="r">violations served</th><th></th></tr></thead><tbody>${r}</tbody></table>
-      <div class="tail">${e.ab.foot}<br><b>jev-hammer</b> — one call prices a whole auction; latency is flat from 1 to 40 typed questions. github.com/leepokai/jev-hammer</div>`;
+      <div class="tail">${e.ab.foot}<br><b>jev-adrank</b> — one call prices a whole auction; latency is flat from 1 to 40 typed questions. github.com/leepokai/jev-adrank</div>`;
     setTimeout(() => $("end").className = "on", 2200);
   }
   if (e.type === "error") $("settle").innerHTML = `<span style="color:var(--bad)">${e.message}</span>`;

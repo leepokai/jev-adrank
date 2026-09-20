@@ -1,5 +1,5 @@
 {
-  "name": "jev-hammer",
+  "name": "jev-adrank",
   "version": "0.1.0",
   "type": "module",
   "description": "Real-time ad ranking and creative review on a typed evaluation model. One call prices a whole auction.",
@@ -11,7 +11,7 @@
     "ui": "node ui/server.mjs",
     "record": "node ui/record.mjs --pages 4 --pace 1.35",
     "vo": "node ui/vo.mjs",
-    "clip": "node ui/record.mjs --path /short --size 1280x720 --pages 1 --mode short --until end --hold 2.2 --out video/jev-hammer-x.mp4 --marks video/marks-short.json"
+    "clip": "node ui/record.mjs --path /short --size 1280x720 --pages 1 --mode short --until end --hold 2.2 --out video/jev-adrank-x.mp4 --marks video/marks-short.json"
   },
   "dependencies": {
     "jev-guard": "^0.3.1"
@@ -51,8 +51,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/leepokai/jev-hammer.git"
+    "url": "git+https://github.com/leepokai/jev-adrank.git"
   },
-  "homepage": "https://github.com/leepokai/jev-hammer#readme",
-  "bugs": "https://github.com/leepokai/jev-hammer/issues"
+  "homepage": "https://github.com/leepokai/jev-adrank#readme",
+  "bugs": "https://github.com/leepokai/jev-adrank/issues"
 }
