@@ -1,0 +1,16 @@
+{
+  "name": "jev-rec-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Real-time feed ranking with Jev: one typed call scores a whole candidate page.",
+  "scripts": {
+    "demo": "node demo.js",
+    "eval": "node eval.js",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "jev-guard": "^0.3.1"
+  },
+  "engines": { "node": ">=20.3" }
+}
