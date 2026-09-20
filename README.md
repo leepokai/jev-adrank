@@ -83,14 +83,20 @@ p(tap)/p(buy) and eCPM, the feed on the left, live meters for latency, spend, GM
 <div align="center"><img src="video/poster.jpg" width="820" alt="the board, mid-auction"></div>
 
 <div align="center">
-  <a href="https://github.com/leepokai/jev-hammer/raw/main/video/jev-hammer.mp4">▶ 75-second walkthrough, with voiceover</a>
+  <a href="https://github.com/leepokai/jev-hammer/raw/main/video/jev-hammer.mp4">▶ 77-second walkthrough, with voiceover</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/leepokai/jev-hammer/raw/main/video/jev-hammer-x.mp4">▶ 11-second cut</a>
 </div>
 
 ```bash
 npm run ui        # localhost:4173  (?user=Mei&pages=6&pace=1.35)
 npm run record    # drives it headless → video/jev-hammer-silent.mp4 (1920×1080)
 npm run vo        # adds narration      → video/jev-hammer.mp4
+npm run clip      # the 11-second cut   → video/jev-hammer-x.mp4 (1280×720, silent)
 ```
+
+`/short` is a second composition on the same stream — two beats, big type, no narration, sized for a
+muted autoplay in a timeline. Same live calls, same numbers, a tenth of the running time.
 
 `record` writes `video/marks.json`, the wall-clock time of every event in that take, and `vo` places each line
 against those marks (`"at": "bids#2+0.5"` = half a second after the second auction call came back) — so

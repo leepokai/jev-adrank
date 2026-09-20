@@ -11,14 +11,14 @@ import { runShop } from "../src/shopsim.js";
 const PORT = +(process.env.PORT || 4173);
 process.env.JEV_REC_TIMEOUT_MS ??= "6000";   // a demo would rather wait than show the fallback path
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const page = new URL("./index.html", import.meta.url);
+const pages_ = { "/": "./index.html", "/short": "./short.html" };
 const ab = JSON.parse(await readFile(new URL("./ab.json", import.meta.url), "utf8"));
 
 createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
-  if (url.pathname === "/") {
+  if (pages_[url.pathname]) {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    return res.end(await readFile(page));
+    return res.end(await readFile(new URL(pages_[url.pathname], import.meta.url)));
   }
   if (url.pathname !== "/run") { res.writeHead(404); return res.end(); }
 
@@ -26,13 +26,17 @@ createServer(async (req, res) => {
   const send = (o) => res.write(`data: ${JSON.stringify(o)}\n\n`);
   const pace = +(url.searchParams.get("pace") ?? 1);
   const wait = (ms) => sleep(ms * pace);
+  // The short cut spends its seconds where a muted viewer needs them: on the two verdicts, not on scrolling.
+  const T = url.searchParams.get("mode") === "short"
+    ? { boot: 300, afterCall: 150, clean: 6, reject: 190, verdict: 1900, page: 0, organic: 0, bids: 700, win: 2100 }
+    : { boot: 3800, afterCall: 500, clean: 95, reject: 420, verdict: 6800, page: 500, organic: 750, bids: 1500, win: 2200 };
 
   try {
     const user = PERSONAS.find((p) => p.name === (url.searchParams.get("user") ?? "Kai")) ?? PERSONAS[0];
     const pages = +(url.searchParams.get("pages") ?? 4);
     send({ type: "boot", user: { name: user.name, id: user.id, profile: user.profile, tags: user.tags },
       backend: mode(), creatives: ADS.length, floor: FLOOR_ECPM, minPctr: MIN_PCTR, minPcvr: MIN_PCVR, pages });
-    await wait(3800);   // room for the opening line
+    await wait(T.boot);
 
     // ---- stage 1: creative review, one call, revealed row by row ----
     resetMeter();
@@ -40,33 +44,33 @@ createServer(async (req, res) => {
     await reviewCreatives(ADS);
     const reviewMs = meter.lat[0] ?? 0, reviewCost = cost();
     send({ type: "review-call", ms: reviewMs, cost: reviewCost, n: ADS.length });
-    await wait(500);
+    await wait(T.afterCall);
     for (const a of ADS) {
       send({ type: "review-row", id: a.id, verdict: a.review, p: a.review_p, kind: a.review_kind, truth: a.hidden_policy });
-      await wait(a.review === "rejected" ? 420 : 95);
+      await wait(a.review === "rejected" ? T.reject : T.clean);
     }
     const planted = ADS.filter((a) => a.hidden_policy !== "ok");
     send({ type: "review-done", caught: planted.filter((a) => a.review === "rejected").length, planted: planted.length,
       falsePos: ADS.filter((a) => a.hidden_policy === "ok" && a.review === "rejected").length, clean: ADS.length - planted.length });
-    await wait(6800);   // room for the review verdict line
+    await wait(T.verdict);
 
     // ---- stage 2: the feed, one auction per page ----
     resetMeter();
     send({ type: "feed-start" });
     const out = await runShop(user, jevBid, { pages, seed: 11, onEvent: async (e) => {
-      if (e.type === "page") { send({ type: "page", page: e.page }); return wait(500); }
+      if (e.type === "page") { send({ type: "page", page: e.page }); return wait(T.page); }
       if (e.type === "organic") {
         send({ type: "organic", title: e.item.title, topic: e.item.topic, len_s: e.item.len_s, engaged: e.engaged, dwell_s: e.dwell_s });
-        return wait(750);
+        return wait(T.organic);
       }
-      if (e.type === "bids") { send({ type: "bids", rows: e.rows, ms: e.bidMs, fallback: e.fallback }); return wait(1500); }
+      if (e.type === "bids") { send({ type: "bids", rows: e.rows, ms: e.bidMs, fallback: e.fallback }); return wait(T.bids); }
       if (e.kind === "blank") { send({ type: "blank", why: e.why, pool: e.pool }); return wait(900); }
       if (e.kind === "ad") {
         send({ type: "win", advertiser: e.ad.advertiser, product: e.ad.product, category: e.ad.category, price_ntd: e.ad.price_ntd,
           creative: e.ad.creative, paid: e.price, runnerUp: e.runnerUp, depth: e.depth, pCtr: e.pCtr, pCvr: e.pCvr, ecpm: e.ecpm,
           clicked: e.clicked, bought: e.bought, eRev: e.eRev, eGmv: e.eGmv, pTrue: e.pTrue, totals: e.totals,
           meters: { calls: meter.calls, p50: pct(meter.lat, 0.5), last: meter.lat.at(-1), cost: cost() + reviewCost } });
-        return wait(2200);
+        return wait(T.win);
       }
     } });
     send({ type: "done", ...out, session: undefined, ast: undefined, ab,

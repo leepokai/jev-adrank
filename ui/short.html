@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>jev-hammer</title>
+<style>
+  :root{--bg:#08090D;--panel:#12141C;--line:#232838;--fg:#EDF1F8;--mut:#8C97AD;--dim:#5A6377;
+    --jev:#22D3EE;--ok:#34D399;--bad:#F43F5E;--warn:#FBBF24;--mono:ui-monospace,"SF Mono",Menlo,monospace}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1280px;height:720px;overflow:hidden;background:var(--bg);color:var(--fg);
+    font:17px/1.4 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{position:absolute;inset:0;padding:46px 58px;display:flex;flex-direction:column;
+    opacity:0;transition:opacity .28s ease}
+  .wrap.on{opacity:1}
+  .kicker{font-size:15px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);font-weight:600;margin-bottom:10px}
+  h1{font-size:46px;line-height:1.06;letter-spacing:-.025em;font-weight:650;margin-bottom:8px}
+  h1 b{color:var(--jev);font-weight:650}
+  .sub{font-size:21px;color:var(--mut);font-family:var(--mono);margin-bottom:26px}
+  .sub .t{color:var(--jev)}
+  .rows{flex:1;min-height:0;display:flex;flex-direction:column;gap:5px;justify-content:center}
+  .hd{display:grid;grid-template-columns:214px 92px 92px 1fr 124px 62px;gap:14px;padding:0 16px 7px;
+    font:600 12.5px/1 var(--mono);letter-spacing:.13em;text-transform:uppercase;color:var(--dim)}
+  .hd span:nth-child(2),.hd span:nth-child(3),.hd span:nth-child(5){text-align:right}
+
+  .r{display:grid;grid-template-columns:214px 92px 92px 1fr 124px 62px;gap:14px;align-items:center;
+    padding:9px 16px;border-radius:9px;background:var(--panel);border:1px solid var(--line);
+    font-size:19px;opacity:0;transform:translateY(9px);transition:all .3s cubic-bezier(.2,.8,.2,1)}
+  .r.in{opacity:1;transform:none}
+  .r .n{font-weight:600}
+  .r .v{font-family:var(--mono);color:var(--mut);font-size:18px;text-align:right}
+  .r .p{font-family:var(--mono);text-align:right;font-size:19px;color:var(--mut)}
+  .bar{height:9px;border-radius:5px;background:#2B3346;position:relative}
+  .bar i{position:absolute;inset:0;width:0;border-radius:5px;background:#414B66;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .r.win{background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.55)}
+  .r.win .n,.r.win .p{color:var(--fg)}
+  .r.win .bar i{background:var(--jev)}
+  .r .wf{font:700 13px/1 var(--mono);letter-spacing:.11em;color:var(--jev);text-align:right}
+
+  .rj{display:grid;grid-template-columns:118px 76px 250px 1fr;gap:18px;align-items:center;padding:10px 16px;
+    border-radius:9px;font-size:19px;opacity:0;transform:translateY(9px);transition:all .3s cubic-bezier(.2,.8,.2,1)}
+  .rj.in{opacity:1;transform:none}
+  .rj.bad{background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.45)}
+  .rj.good{background:var(--panel);border:1px solid var(--line)}
+  .rj .v{font:700 15px/1 var(--mono);letter-spacing:.09em}
+  .rj.bad .v{color:var(--bad)} .rj.good .v{color:var(--ok)}
+  .rj .pp{font-family:var(--mono);color:var(--mut);font-size:18px}
+  .rj .k{font-family:var(--mono);font-size:15px;color:var(--warn)}
+  .rj .c{color:var(--dim);font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rj.bad .c{color:#D2A8B4}
+
+  .foot{margin-top:24px;display:flex;align-items:baseline;gap:30px;font-family:var(--mono);font-size:22px;color:var(--mut)}
+  .foot b{color:var(--fg);font-weight:500} .foot .g{color:var(--ok)} .foot .c{color:var(--jev)}
+
+  #end{position:absolute;inset:0;display:grid;place-items:center;opacity:0;transition:opacity .45s;background:var(--bg)}
+  #end.on{opacity:1}
+  #end .box{text-align:center}
+  #end h2{font-size:62px;letter-spacing:-.03em;font-weight:650;margin-bottom:14px}
+  #end h2 b{color:var(--jev)}
+  #end p{font-size:24px;color:var(--mut);font-family:var(--mono);line-height:1.7}
+  #end .repo{margin-top:22px;font-size:21px;color:var(--dim);font-family:var(--mono)}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="w1">
+  <div class="kicker">creative review</div>
+  <h1>Every ad creative, <b>one call</b>.</h1>
+  <div class="sub" id="s1">23 creatives × 2 typed questions · <span class="t" id="t1">—</span></div>
+  <div class="rows" id="rj"></div>
+  <div class="foot" id="f1"></div>
+</div>
+
+<div class="wrap" id="w2">
+  <div class="kicker">live auction · one ad slot</div>
+  <h1>Every bidder scored, <b>one call</b>.</h1>
+  <div class="sub" id="s2">18 ads × 2 typed questions · <span class="t" id="t2">—</span></div>
+  <div class="rows" id="bd"></div>
+  <div class="foot" id="f2"></div>
+</div>
+
+<div id="end"><div class="box">
+  <h2><b>jev-hammer</b></h2>
+  <p>real-time ad ranking and creative review<br>no trained CTR model · no logged clicks</p>
+  <div class="repo">github.com/leepokai/jev-hammer</div>
+</div></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const nt = (n) => "NT$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: n < 100 ? 2 : 0 });
+const pc = (n) => (n * 100).toFixed(1) + "%";
+const show = (id) => { document.querySelectorAll(".wrap").forEach((w) => w.className = "wrap"); $(id).className = "wrap on"; };
+
+// counts up while a call is actually in flight, so the number on screen is the real round-trip
+let tick = null;
+function count(el) {
+  const t0 = performance.now();
+  clearInterval(tick);
+  tick = setInterval(() => { el.textContent = Math.round(performance.now() - t0) + " ms"; }, 16);
+  return () => { clearInterval(tick); };
+}
+let stop1, stop2, ads = [], shownRej = 0;
+window.__marks = [];
+const mark = (k) => window.__marks.push({ k, t: Date.now() });
+
+const es = new EventSource("/run" + location.search);
+es.onmessage = (m) => {
+  const e = JSON.parse(m.data);
+
+  if (e.type === "boot") { show("w1"); mark("boot"); stop1 = count($("t1")); }
+  if (e.type === "review-start") { ads = e.ads; $("s1").firstChild.textContent = `${e.ads.length} creatives × 2 typed questions · `; }
+  if (e.type === "review-call") {
+    stop1?.(); mark("reviewed");
+    $("t1").textContent = e.ms + " ms";
+    const keep = ads.filter((a) => /GUARANTEED|Cures diabetes|90% off|Lose 10kg|ranking model/.test(a.creative));
+    $("rj").innerHTML = keep.map((a) => `<div class="rj" id="j_${a.id}">
+      <span class="v">·····</span><span class="pp"></span><span class="k"></span><span class="c">${a.creative}</span></div>`).join("");
+  }
+  if (e.type === "review-row" && $("j_" + e.id)) {
+    const row = $("j_" + e.id), rej = e.verdict === "rejected";
+    row.className = "rj in " + (rej ? "bad" : "good");
+    row.children[0].textContent = rej ? "REJECT" : "approve";
+    row.children[1].textContent = (e.p ?? 0).toFixed(2);
+    row.children[2].textContent = e.kind ?? "";
+    if (++shownRej === 5) mark("rejects");
+  }
+  if (e.type === "review-done") {
+    $("f1").innerHTML = `<span><b class="g">${e.caught}/${e.planted}</b> planted violations caught</span>
+      <span><b class="g">${e.falsePos}</b> false positives on ${e.clean} clean creatives</span>`;
+    mark("verdict");
+  }
+  if (e.type === "bids") {
+    stop2?.(); mark("bids");
+    $("t2").textContent = e.ms + " ms";
+    $("s2").firstChild.textContent = `${e.rows.length} ads × 2 typed questions · `;
+    const top = e.rows.slice(0, 6), max = Math.max(...top.map((r) => r.ecpm), 1);
+    $("bd").innerHTML = `<div class="hd"><span>advertiser</span><span>p(tap)</span><span>p(buy)</span><span></span><span>eCPM</span><span></span></div>`
+      + top.map((r) => `<div class="r" id="d_${r.id}">
+        <span class="n">${r.advertiser}</span><span class="v">${pc(r.pCtr)}</span><span class="v">${pc(r.pCvr)}</span>
+        <div class="bar"><i style="width:0"></i></div><span class="p">${nt(r.ecpm)}</span><span class="wf"></span></div>`).join("");
+    [...$("bd").querySelectorAll(".r")].forEach((el, i) => setTimeout(() => {
+      el.classList.add("in");
+      el.querySelector("i").style.width = (top[i].ecpm / max) * 100 + "%";
+    }, 60 * i));
+  }
+  if (e.type === "win") {
+    mark("win");
+    const row = [...$("bd").querySelectorAll(".r")].find((r) => r.firstElementChild.textContent === e.advertiser);
+    if (row) { row.classList.add("win"); row.querySelector(".wf").textContent = "WINS"; }
+    $("f2").innerHTML = `<span>pays <b class="c">${nt(e.paid)}</b> second price</span>
+      <span>both calls <b class="c">$${e.meters.cost.toFixed(5)}</b></span>`;
+  }
+  if (e.type === "feed-start") { show("w2"); stop2 = count($("t2")); }
+  if (e.type === "done") { mark("done"); es.close(); setTimeout(() => { $("end").className = "on"; mark("end"); }, 900); }
+};
+</script>
+</body>
+</html>
